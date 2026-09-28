@@ -135,16 +135,18 @@ function NotificationBell() {
 
   useEffect(() => {
     let cancelled = false;
-    async function loadNotifications() {
-      try {
-        const supabase = createClient();
-        const { data: claimsData } = await supabase.auth.getClaims();
-        const userId = claimsData?.claims?.sub;
-        if (!userId) return;
+    const supabase = createClient();
+    let channel: ReturnType<typeof supabase.channel> | null = null;
 
+    async function loadNotifications(userId: string) {
+      try {
+        // The embed needs an explicit FK hint: notifications has two FKs to
+        // profiles (recipient_user_id and sender_user_id), and a bare
+        // profiles(full_name) makes PostgREST fail with PGRST201 — the error was
+        // swallowed below, leaving the bell permanently empty.
         const { data: notifs, error } = await supabase
           .from("notifications")
-          .select("id, type, title, message, link, is_read, created_at, sender_user_id, profiles(full_name)")
+          .select("id, type, title, message, link, is_read, created_at, sender_user_id, profiles!notifications_sender_user_id_fkey(full_name)")
           .eq("recipient_user_id", userId)
           .order("created_at", { ascending: false })
           .limit(20);
@@ -157,8 +159,39 @@ function NotificationBell() {
         // silently fail
       }
     }
-    void loadNotifications();
-    return () => { cancelled = true; };
+
+    async function init() {
+      const { data: claimsData } = await supabase.auth.getClaims();
+      const userId = claimsData?.claims?.sub;
+      if (!userId || cancelled) return;
+
+      await loadNotifications(userId);
+      if (cancelled) return;
+
+      // Keep the badge live. Realtime enforces RLS per row, so the subscription
+      // must carry the column the policy filters on; a filterless subscription
+      // on this table receives nothing (see 033_realtime_notifications.sql).
+      channel = supabase
+        .channel("notification-bell")
+        .on(
+          "postgres_changes",
+          {
+            event: "*",
+            schema: "public",
+            table: "notifications",
+            filter: `recipient_user_id=eq.${userId}`,
+          },
+          () => { void loadNotifications(userId); }
+        )
+        .subscribe();
+    }
+
+    void init();
+
+    return () => {
+      cancelled = true;
+      if (channel) void supabase.removeChannel(channel);
+    };
   }, []);
 
   async function markAllRead() {
