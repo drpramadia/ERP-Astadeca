@@ -149,7 +149,9 @@ export function useSession() {
     const role = roleResult.data as { name?: string; code?: string } | null;
     const organization = orgResult.data as { name?: string } | null;
     const codes = Array.isArray(permissionResult.data)
-      ? (permissionResult.data as unknown as string[])
+      ? ((permissionResult.data as unknown as { permission_code: string }[]) ?? []).map(
+          (r) => r.permission_code
+        )
       : [];
 
     setState({
