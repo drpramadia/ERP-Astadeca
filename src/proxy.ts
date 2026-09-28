@@ -53,10 +53,7 @@ export async function proxy(request: NextRequest) {
   /*
    * Route yang boleh dibuka tanpa login.
    */
-  const publicPaths = [
-    "/login",
-    "/auth",
-  ];
+  const publicPaths = ["/login"];
 
   const isPublicPath = publicPaths.some(
     (path) =>
