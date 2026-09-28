@@ -1,0 +1,160 @@
+@import "tailwindcss";
+
+/* ============================================================
+   ASTADECA BASWARA PERSADA — DESIGN TOKENS
+   Premium enterprise logistics visual system.
+   Use semantic utilities (bg-canvas, text-ink, border-line, …)
+   rather than scattering literal colors through components.
+   ============================================================ */
+
+@theme {
+  /* Surfaces */
+  --color-canvas: #f2f6f6;
+  --color-surface: #ffffff;
+  --color-sidebar: #111b23;
+  --color-sidebar-hover: #1d2b34;
+  --color-sidebar-active: #223b43;
+
+  /* Brand */
+  --color-primary: #087e8b;
+  --color-primary-dark: #06616d;
+  --color-primary-soft: #e1f2f2;
+  --color-accent: #d49a45;
+
+  /* Typography */
+  --color-ink: #14232b;
+  --color-muted: #64747b;
+
+  /* Structure */
+  --color-line: #dce5e5;
+
+  /* Semantic status */
+  --color-success: #16845b;
+  --color-success-soft: #e7f5ef;
+  --color-warning: #c77a00;
+  --color-warning-soft: #fdf3e3;
+  --color-danger: #d64545;
+  --color-danger-soft: #fdecec;
+  --color-neutral-soft: #f1f5f9;
+
+  /* Type scale */
+  --text-page-title: 1.75rem;
+  --text-page-title--line-height: 2.125rem;
+  --text-section-title: 1.125rem;
+  --text-section-title--line-height: 1.625rem;
+
+  --font-sans: var(--font-dm-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-space-grotesk), var(--font-dm-sans), sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+}
+
+/* ============================================================
+   BASE
+   ============================================================ */
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: var(--color-canvas);
+    background-image: radial-gradient(#b8cccc 0.55px, transparent 0.55px), linear-gradient(145deg, #f7f9f8 0%, #eff5f4 58%, #f4f7f7 100%);
+    background-size: 22px 22px, 100% 100%;
+    background-attachment: fixed;
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-size: 0.875rem;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+
+  ::selection {
+    background: var(--color-primary-soft);
+  }
+
+  button,
+  a,
+  input,
+  select,
+  textarea {
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+/* ============================================================
+   UTILITIES
+   ============================================================ */
+
+/* Tabular figures keep operational numbers aligned in tables and KPIs. */
+@utility tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+@utility scroll-slim {
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
+
+  &::-webkit-scrollbar {
+    height: 8px;
+    width: 8px;
+  }
+  &::-webkit-scrollbar-thumb {
+    background-color: #cbd5e1;
+    border-radius: 9999px;
+  }
+  &::-webkit-scrollbar-track {
+    background-color: transparent;
+  }
+}
+
+/* Horizontally scrollable operational tables on narrow screens. */
+@utility table-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+@utility font-display {
+  font-family: var(--font-display);
+}
+
+@utility app-surface {
+  border: 1px solid color-mix(in srgb, var(--color-line) 80%, white);
+  background: linear-gradient(155deg, #ffffff 0%, #fbfdfd 100%);
+  box-shadow: 0 1px 2px rgb(20 35 43 / 4%), 0 12px 30px rgb(26 62 67 / 5%);
+}
+
+@utility button-lift {
+  transition: transform 140ms ease, box-shadow 140ms ease, filter 140ms ease;
+  transform: translateY(0);
+
+  &:hover:not(:disabled) {
+    filter: saturate(1.06) brightness(1.015);
+  }
+
+  &:active:not(:disabled) {
+    transform: translateY(2px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+}

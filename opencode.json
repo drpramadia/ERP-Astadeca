@@ -1,0 +1,10 @@
+{
+  "model": "balitech-v3/bt/cc-claude-haiku-4-5-20251001",
+  "small_model": "balitech-v3/bt/cc-claude-haiku-4-5-20251001",
+  "provider": {
+    "balitech-v3": {
+      "npm": "@ai-sdk/openai-compatible",
+      "options": { "baseURL": "https://balitechsolution.com/v3", "apiKey": "sk-db-WLQqWD6dX-waLixWFPyZJg8OLuxa7Ivv" }
+    }
+  }
+}
