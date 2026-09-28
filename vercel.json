@@ -1,7 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "nextjs",
-  "regions": [
-    "bom1"
-  ]
+  "nodeVersion": "22",
+  "regions": ["sin1"]
 }
