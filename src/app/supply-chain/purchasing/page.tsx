@@ -92,7 +92,7 @@ export default function PurchasingPage() {
       // Load suppliers and products
       const [suppliersRes, productsRes] = await Promise.all([
         supabase.from("suppliers").select("id, code, name").eq("organization_id", membership.organization_id).order("name"),
-        supabase.from("products").select("id, code, name, unit_id").eq("organization_id", membership.organization_id).order("name"),
+        supabase.from("products").select("id, sku, name, unit_id").eq("organization_id", membership.organization_id).order("name"),
       ]);
       setSuppliers((suppliersRes as any)?.data || []);
       setProducts((productsRes as any)?.data || []);
@@ -450,7 +450,7 @@ export default function PurchasingPage() {
                             <select className="w-full rounded border border-line bg-white px-2 py-1"
                               value={line.productId} onChange={e => updatePOLine(i, "productId", e.target.value)}>
                               <option value="">Pilih</option>
-                              {products.map((p: any) => <option key={p.id} value={p.id}>{p.name} ({p.code})</option>)}
+                              {products.map((p: any) => <option key={p.id} value={p.id}>{p.name} ({p.sku})</option>)}
                             </select>
                           </td>
                           <td className="p-1"><input type="number" className="w-full rounded border border-line px-2 py-1 text-right" value={line.quantity} onChange={e => updatePOLine(i, "quantity", e.target.value)} placeholder="0" min="0" step="0.001" /></td>
@@ -529,7 +529,7 @@ export default function PurchasingPage() {
                             <select className="w-full rounded border border-line bg-white px-2 py-1"
                               value={line.productId} onChange={e => updatePRLine(i, "productId", e.target.value)}>
                               <option value="">Pilih</option>
-                              {products.map((p: any) => <option key={p.id} value={p.id}>{p.name} ({p.code})</option>)}
+                              {products.map((p: any) => <option key={p.id} value={p.id}>{p.name} ({p.sku})</option>)}
                             </select>
                           </td>
                           <td className="p-1"><input type="number" className="w-full rounded border border-line px-2 py-1 text-right" value={line.quantity} onChange={e => updatePRLine(i, "quantity", e.target.value)} placeholder="0" min="0" step="0.001" /></td>
