@@ -366,25 +366,28 @@ function SidebarLink({
   active,
   Icon,
   onClick,
+  collapsed,
 }: {
   href: string;
   label: string;
   active?: boolean;
   Icon: ComponentType<IconProps>;
   onClick?: () => void;
+  collapsed?: boolean;
 }) {
   return (
     <Link
       href={href}
       onClick={onClick}
+      title={collapsed ? label : undefined}
       className={`group relative flex items-center gap-3 rounded-lg border px-3 py-2.5 text-sm transition-all ${
         active
           ? "border-white/5 bg-sidebar-active text-white shadow-[inset_3px_0_0_#d49a45,0_7px_18px_rgb(0_0_0_/_14%)]"
           : "border-transparent text-slate-300 hover:border-white/5 hover:bg-sidebar-hover hover:text-white"
       }`}
     >
-      <Icon className="h-[18px] w-[18px]" />
-      <span className="truncate">{label}</span>
+      <Icon className="h-[18px] w-[18px] shrink-0" />
+      {!collapsed && <span className="truncate">{label}</span>}
     </Link>
   );
 }
@@ -393,6 +396,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const { userId, loaded, permissions, isSuperUser, isDirector, name, email, organizationName, roleName } = useSession();
 
   const canSee = (perm: string | undefined) => {
@@ -433,28 +437,40 @@ export function AppShell({ children }: { children: ReactNode }) {
   return (
       <div className="min-h-screen bg-canvas text-ink">
       <div className="flex min-h-screen">
-        <aside className="hidden w-[286px] shrink-0 border-r border-white/[0.07] bg-gradient-to-br from-[#1a2a32] via-sidebar to-[#0d151b] text-slate-100 lg:flex lg:flex-col">
-          <div className="border-b border-white/[0.07] px-5 py-5">
-            <div className="flex items-center gap-3">
-              <Image src="/brand/astadeca.png" alt="ASTADECA" width={136} height={96} className="h-12 w-[68px] shrink-0 object-contain" priority />
-              <div className="min-w-0">
-                <p className="truncate text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-300">ASTADECA</p>
-                <p className="truncate text-[10px] text-slate-400">BASWARA PERSADA</p>
+        <aside className={`hidden border-r border-white/[0.07] bg-gradient-to-br from-[#1a2a32] via-sidebar to-[#0d151b] text-slate-100 lg:flex lg:flex-col transition-all duration-200 ${sidebarCollapsed ? "w-[68px]" : "w-[286px]"}`}>
+          <div className={`border-b border-white/[0.07] px-4 py-4 ${sidebarCollapsed ? "flex justify-center" : "px-5 py-5"}`}>
+            {!sidebarCollapsed && (
+              <div className="flex items-center gap-3">
+                <Image src="/brand/astadeca.png" alt="ASTADECA" width={136} height={96} className="h-12 w-[68px] shrink-0 object-contain" priority />
+                <div className="min-w-0">
+                  <p className="truncate text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-300">ASTADECA</p>
+                  <p className="truncate text-[10px] text-slate-400">BASWARA PERSADA</p>
+                </div>
               </div>
-            </div>
-            <div className="mt-4">
+            )}
+            <button
+              type="button"
+              onClick={() => setSidebarCollapsed((v) => !v)}
+              title={sidebarCollapsed ? "Perbesar sidebar" : "Perkecil sidebar"}
+              className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-slate-300 transition-colors hover:bg-white/10 hover:text-white ${!sidebarCollapsed ? "ml-auto" : ""}`}
+            >
+              <span className={`transition-transform duration-200 ${sidebarCollapsed ? "rotate-180" : ""}`}>&#9664;</span>
+            </button>
+          </div>
+          {!sidebarCollapsed && (
+            <div className="border-b border-white/[0.07] px-5 py-4">
               <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-slate-400">Nawasena Dakara Abadi</p>
               <p className="mt-1 text-xs text-slate-300">Cold Storage & Supply Chain</p>
             </div>
-          </div>
+          )}
 
-          <nav className="scroll-slim flex-1 space-y-6 overflow-y-auto px-4 py-5">
+          <nav className={`scroll-slim flex-1 space-y-6 overflow-y-auto ${sidebarCollapsed ? "px-2 py-5" : "px-4 py-5"}`}>
             {visibleGroups.length === 0 && !loaded && (
               <div className="px-3 py-4 text-xs text-slate-500">Memuat…</div>
             )}
             {visibleGroups.map((group) => (
               <div key={group.label}>
-                <p className="px-3 pb-2 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">{group.label}</p>
+                {!sidebarCollapsed && <p className="px-3 pb-2 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">{group.label}</p>}
                 <div className="space-y-1">
                   {group.items.map((item) => (
                     <SidebarLink
@@ -463,6 +479,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                       label={item.label}
                       Icon={item.icon}
                       active={isSidebarActive(pathname, item.href)}
+                      collapsed={sidebarCollapsed}
                     />
                   ))}
                 </div>
@@ -537,7 +554,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             </div>
             <div className="space-y-1">
               {visibleGroups.flatMap((g) => g.items).map((item) => (
-                <SidebarLink key={item.label} href={item.href} label={item.label} Icon={item.icon} active={isSidebarActive(pathname, item.href)} onClick={() => setMobileNavOpen(false)} />
+                <SidebarLink key={item.label} href={item.href} label={item.label} Icon={item.icon} active={isSidebarActive(pathname, item.href)} onClick={() => setMobileNavOpen(false)} collapsed={false} />
               ))}
               <button type="button" onClick={() => void signOut()} className="mt-3 flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-slate-300 hover:bg-slate-700/60 hover:text-white">
                 <LogoutIcon className="h-[18px] w-[18px]" />

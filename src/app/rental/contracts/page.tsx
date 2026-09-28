@@ -24,7 +24,10 @@ interface RentalContract {
   payment_terms_days: number;
   created_at: string;
   notes?: string | null;
-  customers?: { name: string; code: string };
+  approval_request_id?: string;
+  cold_storage_id?: string;
+  // embedded relation
+  rental_contracts_customer_fkey?: { name: string; code: string };
 }
 
 interface RentalCustomer {
@@ -77,7 +80,7 @@ export default function RentalContractsPage() {
   async function loadContracts(orgId: string) {
     const { data, error: queryError } = await createClient()
       .from("rental_contracts")
-      .select("*, rental_contracts_customer_fkey(name, code)")
+      .select("*, rental_contracts_customer_fkey(name, code), approval_request_id")
       .eq("organization_id", orgId)
       .order("created_at", { ascending: false });
     if (queryError) throw queryError;
@@ -235,6 +238,27 @@ export default function RentalContractsPage() {
     }
   }
 
+  async function decideContract(contract: RentalContract, action: "approve" | "reject") {
+    if (!actorId || !organizationId) return;
+    setIsSaving(true);
+    setError(null);
+    try {
+      const { error: decideError } = await createClient().rpc("decide_approval_request", {
+        p_approval_request_id: contract.approval_request_id,
+        p_action: action,
+        p_comment: action === "approve" ? "Disetujui." : "Ditolak.",
+        p_actor_user_id: actorId,
+      } as Record<string, unknown>);
+      if (decideError) throw decideError;
+      setMessage(`${contract.contract_number} ${action === "approve" ? "disetujui" : "ditolak"}.`);
+      await loadContracts(organizationId);
+    } catch (decideError) {
+      setError(decideError instanceof Error ? decideError.message : "Persetujuan gagal diproses.");
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
   const statusOptions: Record<string, { label: string; tone: "neutral" | "success" | "warning" | "danger" | "info" }> = {
     DRAFT: { label: "Draft", tone: "neutral" },
     SUBMITTED: { label: "Submitted", tone: "warning" },
@@ -309,8 +333,8 @@ export default function RentalContractsPage() {
                       <tr key={contract.id} className="hover:bg-slate-50 transition-colors">
                         <td className="px-4 py-3 text-sm font-mono font-medium text-ink">{contract.contract_number}</td>
                         <td className="px-4 py-3">
-                          <p className="text-sm font-medium text-ink">{contract.customers?.name || "-"}</p>
-                          <p className="text-xs text-slate-500">{contract.customers?.code || "-"}</p>
+                          <p className="text-sm font-medium text-ink">{contract.rental_contracts_customer_fkey?.name || "−"}</p>
+                          <p className="text-xs text-slate-500">{contract.rental_contracts_customer_fkey?.code || "−"}</p>
                         </td>
                         <td className="px-4 py-3 text-sm text-ink">{contract.title}</td>
                         <td className="px-4 py-3 text-center">
@@ -331,6 +355,8 @@ export default function RentalContractsPage() {
                               <button type="button" onClick={() => openEdit(contract)} className="text-xs font-medium text-slate-500 hover:underline">Edit</button>
                             )}
                             {contract.status === "DRAFT" && <button type="button" onClick={() => void submitContract(contract)} disabled={!canManage || isSaving} className="text-xs font-medium text-primary hover:underline">Submit</button>}
+                            {contract.status === "PENDING_APPROVAL" && <button type="button" onClick={() => void decideContract(contract, "approve")} disabled={isSaving} className="text-xs font-medium text-success hover:underline">Approve</button>}
+                            {contract.status === "PENDING_APPROVAL" && <button type="button" onClick={() => void decideContract(contract, "reject")} disabled={isSaving} className="text-xs font-medium text-danger hover:underline">Reject</button>}
                             {contract.status === "APPROVED" && <button type="button" onClick={() => void activateContract(contract)} disabled={!canManage || isSaving} className="text-xs font-medium text-success hover:underline">Aktifkan</button>}
                           </div>
                         </td>
@@ -360,7 +386,7 @@ export default function RentalContractsPage() {
         </form>
       </Modal>
       <Modal isOpen={details !== null} onClose={() => setDetails(null)} title={details?.contract_number || "Detail kontrak"} size="lg">
-        {details && <dl className="grid gap-3 sm:grid-cols-2">{[["Customer", details.customers?.name || "-"], ["Judul", details.title], ["Status", details.status], ["Mulai", formatDate(details.start_date)], ["Selesai", details.end_date ? formatDate(details.end_date) : "Tidak ditentukan"], ["Billing", frequencyLabels[details.billing_frequency] || details.billing_frequency], ["Termin", `${details.payment_terms_days} hari`], ["Catatan", details.notes || "-"]].map(([label, value]) => <div key={label} className="border-b border-line pb-2"><dt className="text-xs text-slate-500">{label}</dt><dd className="mt-1 text-sm text-ink">{value}</dd></div>)}</dl>}
+        {details && <dl className="grid gap-3 sm:grid-cols-2">{[["Customer", details.rental_contracts_customer_fkey?.name || "−"], ["Judul", details.title], ["Status", details.status], ["Mulai", formatDate(details.start_date)], ["Selesai", details.end_date ? formatDate(details.end_date) : "Tidak ditentukan"], ["Billing", frequencyLabels[details.billing_frequency] || details.billing_frequency], ["Termin", `${details.payment_terms_days} hari`], ["Catatan", details.notes || "−"]].map(([label, value]) => <div key={label} className="border-b border-line pb-2"><dt className="text-xs text-slate-500">{label}</dt><dd className="mt-1 text-sm text-ink">{value}</dd></div>)}</dl>}
       </Modal>
     </AppShell>
   );
