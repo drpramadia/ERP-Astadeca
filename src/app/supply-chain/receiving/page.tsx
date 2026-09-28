@@ -122,7 +122,6 @@ export default function ReceivingPage() {
   const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([]);
   const [coldStorages, setColdStorages] = useState<{ id: string; code: string; name: string }[]>([]);
   const [storageLocations, setStorageLocations] = useState<{ id: string; code: string; name: string; cold_storage_id: string }[]>([]);
-  const [units, setUnits] = useState<{ id: string; code: string; name: string }[]>([]);
 
   const [selectedPoId, setSelectedPoId] = useState("");
   const [receivedDate, setReceivedDate] = useState(() => new Date().toISOString().slice(0, 10));
@@ -133,7 +132,8 @@ export default function ReceivingPage() {
   // ── Load master data ─────────────────────────────────────────────────────
   async function loadLookups(organizationId: string) {
     const supabase = createClient();
-    const [poRes, csRes, locRes, unitRes] = await Promise.all([
+  // ── Drop unused units query: units are embedded in the PO payload ──
+    const [poRes, csRes, locRes] = await Promise.all([
       supabase
         .from("purchase_orders")
         .select("id, po_number, order_date, expected_date, status, suppliers(name, code), purchase_order_items(id, product_id, quantity, unit_id, unit_price, received_quantity, products(id, name, sku, unit_id), units(id, code))")
@@ -143,13 +143,11 @@ export default function ReceivingPage() {
         .limit(50),
       supabase.from("cold_storages").select("id, code, name").eq("organization_id", organizationId).eq("status", "ACTIVE").order("code"),
       supabase.from("storage_locations").select("id, code, name, cold_storage_id").eq("organization_id", organizationId).eq("active", true).order("code"),
-      supabase.from("units").select("id, code, name").eq("organization_id", organizationId).eq("active", true).order("code"),
     ]);
     // PostgREST returns nested embeds as arrays; use unknown[] as the intermediate type.
     setPurchaseOrders((poRes.data || []) as unknown as PurchaseOrder[]);
     setColdStorages(csRes.data || []);
     setStorageLocations(locRes.data || []);
-    setUnits(unitRes.data || []);
   }
 
   // ── Load receiving + QC records ─────────────────────────────────────────

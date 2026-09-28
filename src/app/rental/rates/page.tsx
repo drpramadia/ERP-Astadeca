@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   AlertTriangle,
   CheckCircle,
@@ -9,17 +10,14 @@ import {
   Plus,
   Thermometer,
   Trash2,
-  X,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Modal } from "@/components/ui/modal";
 import { Select } from "@/components/ui/select";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { PageHeader } from "@/components/page-header";
 import {
-  AnimatedBar,
   AnimatedNumber,
   MotionCard,
   PageTransition,
@@ -63,6 +61,8 @@ interface RateRow {
 interface SelectorOption {
   value: string;
   label: string;
+  /** Present only for storage-location options: enables real filtering. */
+  coldStorageId?: string;
 }
 
 interface KpiData {
@@ -133,6 +133,7 @@ const BLANK_FORM: RateForm = {
 /* -------------------------------------------------------------------- */
 
 export default function RentalRatesPage() {
+  const router = useRouter();
   const { userId, organizationId, permissions, isDirector, loaded } = useSession();
 
   const [rates, setRates] = useState<RateRow[]>([]);
@@ -186,7 +187,13 @@ export default function RentalRatesPage() {
     ]);
     setCustomers((cust.data ?? []).map((r) => ({ value: r.id, label: r.name })));
     setColdStorages((cs.data ?? []).map((r) => ({ value: r.id, label: r.name })));
-    setStorageLocations((sl.data ?? []).map((r) => ({ value: r.id, label: `${r.code} — ${r.name}` })));
+    setStorageLocations(
+      (sl.data ?? []).map((r) => ({
+        value: r.id,
+        label: `${r.code} — ${r.name}`,
+        coldStorageId: r.cold_storage_id,
+      }))
+    );
     setProductCategories((pc.data ?? []).map((r) => ({ value: r.id, label: r.name })));
     setProducts((prod.data ?? []).map((r) => ({ value: r.id, label: `${r.name} (${r.sku})` })));
   }, [organizationId]);
@@ -226,14 +233,18 @@ export default function RentalRatesPage() {
 
   useEffect(() => {
     if (loaded && !userId) {
-      window.location.href = "/login";
+      router.replace("/login");
       return;
     }
-    if (loaded && organizationId) {
-      void fetchSelectors();
-      void fetchRates();
+    if (!loaded || !organizationId) return;
+    // Local async runner (codebase convention): keeps setState out of the
+    // synchronous effect body so the hooks lint stays clean.
+    async function load() {
+      await fetchSelectors();
+      await fetchRates();
     }
-  }, [loaded, userId, organizationId, fetchSelectors, fetchRates]);
+    void load();
+  }, [loaded, userId, organizationId, fetchSelectors, fetchRates, router]);
 
   /* ---- form ---- */
   function openCreate() {
@@ -264,10 +275,10 @@ export default function RentalRatesPage() {
       status: rate.status,
     });
     setFormError("");
-    // filter locations by selected cold_storage
+    // filter locations by the rate's cold storage (real filter, not a no-op)
     setFilteredLocations(
       storageLocations.filter(
-        (sl) => !rate.cold_storage_id || rate.cold_storage_id === ""
+        (sl) => !rate.cold_storage_id || sl.coldStorageId === rate.cold_storage_id
       )
     );
     setFilteredProducts(productCategories.length > 0 ? products : []);
@@ -276,7 +287,9 @@ export default function RentalRatesPage() {
 
   function handleColdStorageChange(id: string) {
     setForm((f) => ({ ...f, cold_storage_id: id, storage_location_id: "" }));
-    setFilteredLocations(storageLocations.filter((sl) => sl.value === id || id === ""));
+    setFilteredLocations(
+      storageLocations.filter((sl) => !id || sl.coldStorageId === id)
+    );
   }
 
   function handleCategoryChange(id: string) {
@@ -554,7 +567,7 @@ export default function RentalRatesPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-line">
-                  {visible.map((rate, idx) => (
+                  {visible.map((rate) => (
                     <tr
                       key={rate.id}
                       className="group transition-colors odd:bg-white even:bg-[#fafcfc] hover:bg-primary/[0.03]"

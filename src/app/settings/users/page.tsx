@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { AppShell } from "@/components/app-shell";
 import { PageTransition } from "@/components/motion";
 import { createClient } from "@/lib/supabase/client";
@@ -135,6 +136,7 @@ function SectionHeader({
 
 export default function UsersPage() {
   const session = useSession();
+  const router = useRouter();
   const { userId, isSuperUser, organizationId, loaded, name } = session;
 
   /* ── User list ── */
@@ -223,9 +225,13 @@ export default function UsersPage() {
   }, [organizationId]);
 
   useEffect(() => {
-    if (loaded && organizationId) {
-      void fetchData();
+    if (!loaded || !organizationId) return;
+    // Local async runner: the codebase convention for effect-driven loads —
+    // setState happens after the awaited boundary, never synchronously here.
+    async function load() {
+      await fetchData();
     }
+    void load();
   }, [loaded, organizationId, fetchData]);
 
   /* ── Create user (invitation) ── */
@@ -369,9 +375,9 @@ export default function UsersPage() {
   /* ── Redirect to login if not authenticated ── */
   useEffect(() => {
     if (loaded && !userId) {
-      window.location.href = "/login";
+      router.replace("/login");
     }
-  }, [loaded, userId]);
+  }, [loaded, userId, router]);
 
   /* ── Assignable roles (exclude SYSTEM) ── */
   const assignableRoles = roles.filter((r) => r.code !== "SYSTEM");

@@ -12,23 +12,6 @@
  */
 
 import { createClient } from "@/lib/supabase/server";
-import { createServerClient as createSvcClient } from "@supabase/ssr";
-import { cookies } from "next/headers";
-
-/** Separate client that uses the service_role key for admin operations. */
-async function createAdminClient() {
-  const cookieStore = await cookies();
-  return createSvcClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    {
-      cookies: {
-        getAll() { return cookieStore.getAll(); },
-        setAll() { /* admin writes nothing to user cookies */ },
-      },
-    }
-  );
-}
 
 export interface AdminUser {
   id: string;
