@@ -1,22 +1,26 @@
 import type { Metadata, Viewport } from "next";
-import { DM_Sans, Geist_Mono, Space_Grotesk } from "next/font/google";
+import { JetBrains_Mono, Plus_Jakarta_Sans, Sora } from "next/font/google";
 import "./globals.css";
 
-const dmSans = DM_Sans({
-  variable: "--font-dm-sans",
+const jakarta = Plus_Jakarta_Sans({
+  variable: "--font-jakarta",
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+  weight: ["400", "500", "600", "700", "800"],
+  display: "swap",
 });
 
-const spaceGrotesk = Space_Grotesk({
-  variable: "--font-space-grotesk",
+const sora = Sora({
+  variable: "--font-sora",
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
+  display: "swap",
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const jetbrainsMono = JetBrains_Mono({
+  variable: "--font-jetbrains",
   subsets: ["latin"],
+  weight: ["400", "500", "600"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -24,23 +28,19 @@ export const metadata: Metadata = {
     default: "ASTADECA — Nawasena Dakara Abadi",
     template: "%s · ASTADECA",
   },
-  description:
-    "Sistem manajemen cold storage, rantai pasok, dan penyewaan gudang.",
+  description: "Sistem manajemen cold storage, rantai pasok, dan penyewaan gudang.",
   applicationName: "ASTADECA Warehouse System",
 };
 
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  themeColor: "#0b1728",
+  themeColor: "#0e181f",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html
-      lang="id"
-      className={`${dmSans.variable} ${spaceGrotesk.variable} ${geistMono.variable} h-full antialiased`}
-    >
+    <html lang="id" className={`${jakarta.variable} ${sora.variable} ${jetbrainsMono.variable} h-full antialiased`}>
       <body className="min-h-full">{children}</body>
     </html>
   );
