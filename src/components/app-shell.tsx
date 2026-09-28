@@ -308,7 +308,7 @@ export const NAV_GROUPS = [
   {
     label: "Ringkasan",
     items: [
-      { label: "Dasbor", href: "/dashboard", icon: HouseIcon, permission: "dashboard.view" },
+      { label: "Dashboard", href: "/dashboard", icon: HouseIcon, permission: "dashboard.view" },
     ],
   },
   {
@@ -420,9 +420,11 @@ export function AppShell({ children }: { children: ReactNode }) {
   // Single source of truth: exact match OR controlled child-route match.
   // Never matches overlapping siblings.
   function isSidebarActive(pathname: string, href: string): boolean {
-    const clean = href.split("?")[0];
-    if (pathname === clean) return true;
-    if (clean.endsWith("/") ? pathname.startsWith(clean) : pathname.startsWith(clean + "/")) return true;
+    // Exact match always wins.
+    if (pathname === href) return true;
+    // Only treat a trailing-slash nav item as a section header that highlights
+    // on any child route. No trailing slash = specific page = exact match only.
+    if (href.endsWith("/")) return pathname.startsWith(href);
     return false;
   }
 
