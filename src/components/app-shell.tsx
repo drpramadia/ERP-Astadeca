@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { ComponentType, ReactNode } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { useSession } from "@/hooks/use-permissions";
 
 type IconProps = {
   className?: string;
@@ -295,30 +296,68 @@ function NotificationBell() {
   );
 }
 
-const navigation = [
-  { label: "Ringkasan", href: "/dashboard", icon: HouseIcon },
-  { label: "Pembelian", href: "/supply-chain/purchasing", icon: ReceiptIcon },
-  { label: "Penerimaan", href: "/supply-chain/receiving", icon: PackageIcon },
-  { label: "Kendali Mutu", href: "/supply-chain/qc", icon: ShieldIcon },
-  { label: "Persediaan", href: "/warehouse/inventory", icon: WarehouseIcon },
-  { label: "Penjualan", href: "/supply-chain/sales", icon: ReceiptIcon },
-  { label: "Pengambilan", href: "/supply-chain/picking", icon: GridIcon },
-  { label: "Pengiriman", href: "/supply-chain/delivery", icon: TruckIcon },
-  { label: "Retur", href: "/supply-chain/returns", icon: FileIcon },
-  { label: "Penyewaan", href: "/rental", icon: GaugeIcon },
-  { label: "Kontrak", href: "/rental/contracts", icon: FileIcon },
-  { label: "Penerimaan Barang", href: "/rental/receiving", icon: PackageIcon },
-  { label: "Pelepasan Barang", href: "/rental/release", icon: TruckIcon },
-  { label: "Penagihan", href: "/rental/billing", icon: ReceiptIcon },
-  { label: "Piutang", href: "/finance/receivables", icon: ReceiptIcon },
-  { label: "Hutang", href: "/finance/payables", icon: FileIcon },
-  { label: "Pembayaran", href: "/finance/payments", icon: ReceiptIcon },
-  { label: "Persetujuan", href: "/approval", icon: ShieldIcon },
-  { label: "Dokumen", href: "/documents", icon: FileIcon },
-  { label: "Laporan", href: "/reports", icon: GaugeIcon },
-  { label: "Data Master", href: "/master-data/products", icon: GridIcon },
-  { label: "Pengguna & Hak Akses", href: "/settings/users", icon: ShieldIcon },
-  { label: "Pengaturan", href: "/settings", icon: GaugeIcon },
+/*
+ * Navigation definition: each item carries the permission code required to see it.
+ * The actual visibility gate is in the sidebar/mobile nav rendering below —
+ * an item is hidden when canSee(item.permission) returns false.
+ *
+ * Permission codes are defined in DB (role_permissions table).
+ * If a code doesn't exist in the DB, the item is visible to everyone.
+ */
+export const NAV_GROUPS = [
+  {
+    label: "Ringkasan",
+    items: [
+      { label: "Dasbor", href: "/dashboard", icon: HouseIcon, permission: "dashboard.view" },
+    ],
+  },
+  {
+    label: "Operasional",
+    items: [
+      { label: "Pembelian", href: "/supply-chain/purchasing", icon: ReceiptIcon, permission: "purchase.view" },
+      { label: "Penerimaan", href: "/supply-chain/receiving", icon: PackageIcon, permission: "inventory.receive" },
+      { label: "Kendali Mutu", href: "/supply-chain/qc", icon: ShieldIcon, permission: "inventory.adjust" },
+      { label: "Persediaan", href: "/warehouse/inventory", icon: WarehouseIcon, permission: "inventory.view" },
+      { label: "Penjualan", href: "/supply-chain/sales", icon: ReceiptIcon, permission: "sales.view" },
+      { label: "Pengambilan", href: "/supply-chain/picking", icon: GridIcon, permission: "inventory.view" },
+      { label: "Pengiriman", href: "/supply-chain/delivery", icon: TruckIcon, permission: "inventory.issue" },
+      { label: "Retur", href: "/supply-chain/returns", icon: FileIcon, permission: "inventory.view" },
+    ],
+  },
+  {
+    label: "Cold Storage",
+    items: [
+      { label: "Penyewaan", href: "/rental", icon: GaugeIcon, permission: "rental.view" },
+      { label: "Kontrak", href: "/rental/contracts", icon: FileIcon, permission: "rental.view" },
+      { label: "Penerimaan Barang", href: "/rental/receiving", icon: PackageIcon, permission: "rental.view" },
+      { label: "Pelepasan Barang", href: "/rental/release", icon: TruckIcon, permission: "rental.release" },
+      { label: "Penagihan", href: "/rental/billing", icon: ReceiptIcon, permission: "rental.billing" },
+    ],
+  },
+  {
+    label: "Keuangan",
+    items: [
+      { label: "Piutang", href: "/finance/receivables", icon: ReceiptIcon, permission: "finance.view" },
+      { label: "Hutang", href: "/finance/payables", icon: FileIcon, permission: "finance.view" },
+      { label: "Pembayaran", href: "/finance/payments", icon: ReceiptIcon, permission: "finance.payment" },
+    ],
+  },
+  {
+    label: "Manajemen",
+    items: [
+      { label: "Persetujuan", href: "/approval", icon: ShieldIcon, permission: "approval.approve" },
+      { label: "Dokumen", href: "/documents", icon: FileIcon, permission: "documents.view" },
+      { label: "Laporan", href: "/reports", icon: GaugeIcon, permission: "reports.view" },
+      { label: "Data Master", href: "/master-data/products", icon: GridIcon, permission: "admin.master_data" },
+    ],
+  },
+  {
+    label: "Sistem",
+    items: [
+      { label: "Pengguna & Hak Akses", href: "/settings/users", icon: ShieldIcon, permission: "admin.users" },
+      { label: "Pengaturan", href: "/settings", icon: GaugeIcon, permission: "admin.settings" },
+    ],
+  },
 ];
 
 function SidebarLink({
@@ -354,48 +393,22 @@ export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
-  const [identity, setIdentity] = useState({ name: "Pengguna", role: "", organization: "ASTADECA" });
+  const { userId, loaded, permissions, isSuperUser, isDirector, name, email, organizationName, roleName } = useSession();
 
+  const canSee = (perm: string | undefined) => {
+    if (!perm) return true;
+    if (isSuperUser || isDirector) return true;
+    return permissions.has(perm as Parameters<typeof permissions.has>[0]);
+  };
+
+  const visibleGroups = NAV_GROUPS
+    .map((g) => ({ ...g, items: g.items.filter((i) => canSee(i.permission)) }))
+    .filter((g) => g.items.length > 0);
+
+  // Redirect to login if the session resolves to no user.
   useEffect(() => {
-    let cancelled = false;
-
-    async function loadIdentity() {
-      try {
-        const supabase = createClient();
-        const { data: claimsData } = await supabase.auth.getClaims();
-        const claims = claimsData?.claims;
-        const userId = claims?.sub;
-        if (!userId) return;
-
-        const [{ data: profile }, { data: membership }] = await Promise.all([
-          supabase.from("profiles").select("full_name").eq("id", userId).maybeSingle(),
-          supabase.from("organization_memberships").select("organization_id, role_id").eq("user_id", userId).eq("is_active", true).maybeSingle(),
-        ]);
-
-        const [{ data: role }, { data: organization }] = membership
-          ? await Promise.all([
-              supabase.from("roles").select("name, code").eq("id", membership.role_id).maybeSingle(),
-              supabase.from("organizations").select("name").eq("id", membership.organization_id).maybeSingle(),
-            ])
-          : [{ data: null }, { data: null }];
-
-        if (!cancelled) {
-          setIdentity({
-            name: profile?.full_name || claims.email || "Pengguna",
-            role: role?.name || role?.code || "",
-            organization: organization?.name || "ASTADECA",
-          });
-        }
-      } catch {
-        if (!cancelled) setIdentity((current) => ({ ...current, role: "" }));
-      }
-    }
-
-    void loadIdentity();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+    if (loaded && !userId) router.replace("/login");
+  }, [loaded, userId, router]);
 
   async function signOut() {
     const supabase = createClient();
@@ -413,7 +426,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     return false;
   }
 
-  const initials = identity.name.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join("").toUpperCase();
+  const initials = (name || email || "Pengguna").split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0]).join("").toUpperCase();
 
   return (
       <div className="min-h-screen bg-canvas text-ink">
@@ -434,55 +447,25 @@ export function AppShell({ children }: { children: ReactNode }) {
           </div>
 
           <nav className="scroll-slim flex-1 space-y-6 overflow-y-auto px-4 py-5">
-            <div>
-              <p className="px-3 pb-2 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">Ringkasan</p>
-              <SidebarLink href="/dashboard" label="Ringkasan" active={isSidebarActive(pathname, "/dashboard")} Icon={HouseIcon} />
-            </div>
-
-            <div>
-              <p className="px-3 pb-2 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">Operasional</p>
-              <div className="space-y-1">
-                {navigation.slice(1, 10).map((item) => (
-                  <SidebarLink key={item.label} href={item.href} label={item.label} Icon={item.icon} active={isSidebarActive(pathname, item.href)} />
-                ))}
+            {visibleGroups.length === 0 && !loaded && (
+              <div className="px-3 py-4 text-xs text-slate-500">Memuat…</div>
+            )}
+            {visibleGroups.map((group) => (
+              <div key={group.label}>
+                <p className="px-3 pb-2 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">{group.label}</p>
+                <div className="space-y-1">
+                  {group.items.map((item) => (
+                    <SidebarLink
+                      key={item.href}
+                      href={item.href}
+                      label={item.label}
+                      Icon={item.icon}
+                      active={isSidebarActive(pathname, item.href)}
+                    />
+                  ))}
+                </div>
               </div>
-            </div>
-
-            <div>
-              <p className="px-3 pb-2 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">Cold Storage</p>
-              <div className="space-y-1">
-                {navigation.slice(10, 15).map((item) => (
-                  <SidebarLink key={item.label} href={item.href} label={item.label} Icon={item.icon} active={isSidebarActive(pathname, item.href)} />
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <p className="px-3 pb-2 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">Keuangan</p>
-              <div className="space-y-1">
-                {navigation.slice(15, 18).map((item) => (
-                  <SidebarLink key={item.label} href={item.href} label={item.label} Icon={item.icon} active={isSidebarActive(pathname, item.href)} />
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <p className="px-3 pb-2 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">Manajemen</p>
-              <div className="space-y-1">
-                {navigation.slice(18, 21).map((item) => (
-                  <SidebarLink key={item.label} href={item.href} label={item.label} Icon={item.icon} active={isSidebarActive(pathname, item.href)} />
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <p className="px-3 pb-2 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">Sistem</p>
-              <div className="space-y-1">
-                {navigation.slice(21).map((item) => (
-                  <SidebarLink key={item.label} href={item.href} label={item.label} Icon={item.icon} active={isSidebarActive(pathname, item.href)} />
-                ))}
-              </div>
-            </div>
+            ))}
           </nav>
         </aside>
 
@@ -495,7 +478,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2 truncate text-sm text-slate-500">
-                  <span>{identity.organization}</span>
+                  <span>{organizationName || "ASTADECA"}</span>
                   <span className="text-slate-300">/</span>
                   <span className="font-medium text-slate-700">NAWASENA DAKARA ABADI</span>
                 </div>
@@ -507,8 +490,8 @@ export function AppShell({ children }: { children: ReactNode }) {
                 <div className="flex items-center gap-3 rounded-xl border border-line/80 bg-gradient-to-b from-white to-[#f3f7f7] px-3 py-2 shadow-[inset_0_1px_0_white,0_2px_5px_rgb(20_35_43_/_5%)]">
                   <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-primary to-[#31a79e] font-display text-xs font-bold text-white shadow-[0_2px_5px_rgb(8_126_139_/_25%)]">{initials || "U"}</div>
                   <div className="text-left">
-                    <p className="max-w-40 truncate text-sm font-semibold text-ink">{identity.name}</p>
-                    <p className="text-[11px] text-slate-500">{identity.role || "Akun"}</p>
+                    <p className="max-w-40 truncate text-sm font-semibold text-ink">{name || email || "Pengguna"}</p>
+                    <p className="text-[11px] text-slate-500">{roleName || "Akun"}</p>
                   </div>
                 </div>
                 <button type="button" onClick={() => void signOut()} className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-line text-slate-600 transition-colors hover:bg-slate-50" aria-label="Keluar" title="Keluar">
@@ -524,7 +507,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
       <div className="fixed bottom-0 left-0 right-0 z-30 border-t border-line/80 bg-white/95 p-3 shadow-[0_-10px_30px_rgb(20_35_43_/_9%)] backdrop-blur-xl lg:hidden">
         <div className="flex items-center justify-between gap-2">
-          {navigation.slice(0, 5).map((item) => {
+          {visibleGroups.flatMap((g) => g.items).slice(0, 5).map((item) => {
             const Icon = item.icon;
             return (
               <Link key={item.label} href={item.href} className="flex min-w-0 flex-1 flex-col items-center gap-1 text-[10px] text-slate-500">
@@ -551,7 +534,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               <button type="button" onClick={() => setMobileNavOpen(false)} className="rounded-lg p-2 text-slate-300 hover:bg-slate-700" aria-label="Tutup navigasi">×</button>
             </div>
             <div className="space-y-1">
-              {navigation.map((item) => (
+              {visibleGroups.flatMap((g) => g.items).map((item) => (
                 <SidebarLink key={item.label} href={item.href} label={item.label} Icon={item.icon} active={isSidebarActive(pathname, item.href)} onClick={() => setMobileNavOpen(false)} />
               ))}
               <button type="button" onClick={() => void signOut()} className="mt-3 flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-slate-300 hover:bg-slate-700/60 hover:text-white">

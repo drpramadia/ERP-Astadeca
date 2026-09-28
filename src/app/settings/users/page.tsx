@@ -8,6 +8,7 @@ import { createClient } from "@/lib/supabase/client";
 import { useSession } from "@/hooks/use-permissions";
 import {
   adminCreateUser,
+  adminListUsers,
   adminToggleMembership,
   adminUpdateRole,
   adminGrantSuperUser,
@@ -179,6 +180,12 @@ export default function UsersPage() {
 
     const supabase = createClient();
 
+    // Email lives in auth.users — only the service-role server action can read it.
+    const emailResult = await adminListUsers();
+    const emailById = new Map<string, string>(
+      emailResult.success ? emailResult.users.map((u) => [u.id, u.email]) : []
+    );
+
     // Fetch roles — exclude SYSTEM from regular assignment options
     const { data: rolesData } = await supabase
       .from("roles")
@@ -211,7 +218,7 @@ export default function UsersPage() {
       membershipId: m.id,
       userId: m.user?.id ?? "",
       fullName: m.user?.full_name ?? null,
-      email: "", // populated by adminListUsers parent implementation
+      email: emailById.get(m.user?.id ?? "") ?? "",
       roleId: m.role?.id ?? "",
       roleCode: m.role?.code ?? "",
       roleName: m.role?.name ?? "",
