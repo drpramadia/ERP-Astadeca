@@ -33,24 +33,35 @@ interface RentalCustomer {
   name: string;
 }
 
+interface RentalColdStorage {
+  id: string;
+  code: string;
+  name: string;
+}
+
 interface ContractForm {
   customerId: string;
+  coldStorageId: string;
   title: string;
   startDate: string;
   endDate: string;
+  totalCapacityKg: string;
   billingFrequency: string;
   paymentTermsDays: string;
   notes: string;
 }
 
 const blankForm: ContractForm = {
-  customerId: "", title: "", startDate: new Date().toISOString().slice(0, 10),
-  endDate: "", billingFrequency: "MONTHLY", paymentTermsDays: "30", notes: "",
+  customerId: "", coldStorageId: "", title: "",
+  startDate: new Date().toISOString().slice(0, 10),
+  endDate: "", totalCapacityKg: "",
+  billingFrequency: "MONTHLY", paymentTermsDays: "30", notes: "",
 };
 
 export default function RentalContractsPage() {
   const [contracts, setContracts] = useState<RentalContract[]>([]);
   const [customers, setCustomers] = useState<RentalCustomer[]>([]);
+  const [coldStorages, setColdStorages] = useState<RentalColdStorage[]>([]);
   const [organizationId, setOrganizationId] = useState<string | null>(null);
   const [actorId, setActorId] = useState<string | null>(null);
   const [canManage, setCanManage] = useState(false);
@@ -84,16 +95,19 @@ export default function RentalContractsPage() {
         const { data: membership, error: membershipError } = await supabase.from("organization_memberships").select("organization_id").eq("user_id", userId).eq("is_active", true).maybeSingle();
         if (membershipError) throw membershipError;
         if (!membership) throw new Error("Akun belum memiliki organisasi aktif.");
-        const [customerResult, permissionResult] = await Promise.all([
+        const [customerResult, coldResult, permissionResult] = await Promise.all([
           supabase.from("customers").select("id, code, name").eq("organization_id", membership.organization_id).eq("active", true).eq("is_rental_customer", true).order("name"),
+          supabase.from("cold_storages").select("id, code, name").eq("organization_id", membership.organization_id).eq("status", "ACTIVE").order("code"),
           supabase.rpc("has_org_permission", { p_org_id: membership.organization_id, p_permission_code: "rental.manage" }),
         ]);
         if (customerResult.error) throw customerResult.error;
+        if (coldResult.error) throw coldResult.error;
         if (permissionResult.error) throw permissionResult.error;
         if (!cancelled) {
           setOrganizationId(membership.organization_id);
           setActorId(userId);
           setCustomers((customerResult.data || []) as RentalCustomer[]);
+          setColdStorages((coldResult.data || []) as RentalColdStorage[]);
           setCanManage(Boolean(permissionResult.data));
           await loadContracts(membership.organization_id);
         }
@@ -109,8 +123,9 @@ export default function RentalContractsPage() {
 
   function openCreate() {
     setEditing(null);
-    setForm({ ...blankForm, customerId: customers[0]?.id || "" });
+    setForm({ ...blankForm, customerId: customers[0]?.id || "", coldStorageId: coldStorages[0]?.id || "" });
     setError(null);
+    setMessage(null);
     setIsEditorOpen(true);
   }
 
@@ -118,9 +133,11 @@ export default function RentalContractsPage() {
     setEditing(contract);
     setForm({
       customerId: contract.customer_id,
+      coldStorageId: "",
       title: contract.title,
       startDate: contract.start_date,
       endDate: contract.end_date || "",
+      totalCapacityKg: "",
       billingFrequency: contract.billing_frequency,
       paymentTermsDays: String(contract.payment_terms_days),
       notes: contract.notes || "",
@@ -136,29 +153,38 @@ export default function RentalContractsPage() {
     setError(null);
     try {
       const supabase = createClient();
+      // Order MUST match the DB RPC signature:
+      // p_organization_id, p_customer_id, p_cold_storage_id, p_title,
+      // p_start_date, p_end_date, p_total_capacity_kg, p_billing_frequency,
+      // p_payment_terms_days, p_notes, p_performed_by
       const values = {
+        p_organization_id: organizationId,
         p_customer_id: form.customerId,
+        p_cold_storage_id: form.coldStorageId || null,
         p_title: form.title.trim(),
         p_start_date: form.startDate,
         p_end_date: form.endDate || null,
+        p_total_capacity_kg: form.totalCapacityKg ? Number(form.totalCapacityKg) : null,
         p_billing_frequency: form.billingFrequency,
         p_payment_terms_days: Number(form.paymentTermsDays),
         p_notes: form.notes || null,
+        p_performed_by: actorId,
       };
       if (editing) {
         const { error: updateError } = await supabase.rpc("update_rental_contract_draft", {
           p_contract_id: editing.id,
-          ...values,
-          p_performed_by: actorId,
+          p_title: values.p_title,
+          p_start_date: values.p_start_date,
+          p_end_date: values.p_end_date,
+          p_billing_frequency: values.p_billing_frequency,
+          p_payment_terms_days: values.p_payment_terms_days,
+          p_notes: values.p_notes,
+          p_performed_by: values.p_performed_by,
         });
         if (updateError) throw updateError;
         setMessage("Draft kontrak diperbarui.");
       } else {
-        const { error: createError } = await supabase.rpc("create_rental_contract", {
-          p_organization_id: organizationId,
-          ...values,
-          p_performed_by: actorId,
-        });
+        const { error: createError } = await supabase.rpc("create_rental_contract", values);
         if (createError) throw createError;
         setMessage("Draft kontrak dibuat.");
       }
@@ -321,7 +347,9 @@ export default function RentalContractsPage() {
         <form onSubmit={(event) => void saveContract(event)} className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
             <Select label="Customer rental" required options={[{ value: "", label: "Pilih customer" }, ...customers.map((customer) => ({ value: customer.id, label: `${customer.code} · ${customer.name}` }))]} value={form.customerId} onChange={(event) => setForm((current) => ({ ...current, customerId: event.target.value }))} />
+            <Select label="Cold storage" options={[{ value: "", label: "Semua cold storage" }, ...coldStorages.map((cs) => ({ value: cs.id, label: `${cs.code} · ${cs.name}` }))]} value={form.coldStorageId} onChange={(event) => setForm((current) => ({ ...current, coldStorageId: event.target.value }))} />
             <Input label="Judul kontrak" required value={form.title} onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))} />
+            <Input label="Kapasitas maksimal (kg)" type="number" min="0" value={form.totalCapacityKg} onChange={(event) => setForm((current) => ({ ...current, totalCapacityKg: event.target.value }))} placeholder="Opsional" />
             <Input label="Tanggal mulai" type="date" required value={form.startDate} onChange={(event) => setForm((current) => ({ ...current, startDate: event.target.value }))} />
             <Input label="Tanggal selesai" type="date" min={form.startDate} value={form.endDate} onChange={(event) => setForm((current) => ({ ...current, endDate: event.target.value }))} />
             <Select label="Frekuensi billing" options={[{ value: "DAILY", label: "Harian" }, { value: "WEEKLY", label: "Mingguan" }, { value: "MONTHLY", label: "Bulanan" }, { value: "QUARTERLY", label: "Kuartalan" }]} value={form.billingFrequency} onChange={(event) => setForm((current) => ({ ...current, billingFrequency: event.target.value }))} />
