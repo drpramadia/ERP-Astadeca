@@ -3,29 +3,9 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { AnimatePresence, motion } from "framer-motion";
-import {
-  Bell,
-  ChevronDown,
-  Gauge,
-  Grid,
-  Heart,
-  Home,
-  LayoutGrid,
-  LogOut,
-  Menu,
-  Package,
-  Receipt,
-  Search,
-  Settings,
-  Shield,
-  ShoppingCart,
-  Thermometer,
-  Truck,
-  X,
-} from "lucide-react";
+import { useEffect, useState } from "react";
+import type { ComponentType, ReactNode } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { useSession } from "@/hooks/use-permissions";
 
 type IconProps = {
   className?: string;
@@ -121,6 +101,22 @@ function BellIcon({ className = "h-4 w-4" }: IconProps) {
 }
 
 function MenuIcon({ className = "h-4 w-4" }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={className} aria-hidden="true">
+      <path d="M4 7h16M4 12h16M4 17h16" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function LogoutIcon({ className = "h-4 w-4" }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={className} aria-hidden="true">
+      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+type Notification = {
   id: string;
   type: string;
   title: string;
@@ -299,70 +295,30 @@ function NotificationBell() {
   );
 }
 
-export const NAV_GROUPS: NavGroup[] = [
-  {
-    label: "Ringkasan",
-    items: [
-      { label: "Dasbor", href: "/dashboard", icon: "Home", permission: "dashboard.view" },
-    ],
-  },
-  {
-    label: "Rantai Pasok",
-    items: [
-      { label: "Pembelian", href: "/supply-chain/purchasing", icon: "Receipt", permission: "purchase.view" },
-      { label: "Penerimaan", href: "/supply-chain/receiving", icon: "Package", permission: "inventory.receive" },
-      { label: "Kendali Mutu", href: "/supply-chain/qc", icon: "Shield", permission: "inventory.adjust" },
-      { label: "Penjualan", href: "/supply-chain/sales", icon: "Receipt", permission: "sales.view" },
-      { label: "Pengambilan", href: "/supply-chain/picking", icon: "Grid", permission: "inventory.view" },
-      { label: "Pengiriman", href: "/supply-chain/delivery", icon: "Truck", permission: "inventory.issue" },
-      { label: "Retur", href: "/supply-chain/returns", icon: "Receipt", permission: "inventory.view" },
-    ],
-  },
-  {
-    label: "Cold Storage",
-    items: [
-      { label: "Penyewaan", href: "/rental", icon: "Thermometer", permission: "rental.view" },
-      { label: "Kontrak", href: "/rental/contracts", icon: "Receipt", permission: "rental.view" },
-      { label: "Penerimaan Barang", href: "/rental/receiving", icon: "Package", permission: "rental.view" },
-      { label: "Pelepasan Barang", href: "/rental/release", icon: "Truck", permission: "rental.release" },
-      { label: "Penagihan", href: "/rental/billing", icon: "Receipt", permission: "rental.billing" },
-      { label: "Tarif Sewa", href: "/rental/rates", icon: "Gauge", permission: "rental.view" },
-    ],
-  },
-  {
-    label: "Keuangan",
-    items: [
-      { label: "Piutang", href: "/finance/receivables", icon: "Receipt", permission: "finance.view" },
-      { label: "Hutang", href: "/finance/payables", icon: "Receipt", permission: "finance.view" },
-      { label: "Pembayaran", href: "/finance/payments", icon: "Truck", permission: "finance.payment" },
-    ],
-  },
-  {
-    label: "Persediaan",
-    items: [
-      { label: "Inventori", href: "/warehouse/inventory", icon: "Grid", permission: "inventory.view" },
-      { label: "Mutasi", href: "/warehouse/movements", icon: "Truck", permission: "inventory.view" },
-      { label: "Penyesuaian", href: "/warehouse/adjustments", icon: "Settings", permission: "inventory.adjust" },
-      { label: "Stock Opname", href: "/warehouse/stock-opname", icon: "Package", permission: "inventory.opname" },
-      { label: "Transfer", href: "/warehouse/transfer", icon: "Truck", permission: "inventory.transfer" },
-    ],
-  },
-  {
-    label: "Manajemen",
-    items: [
-      { label: "Persetujuan", href: "/approval", icon: "Shield", permission: "approval.approve" },
-      { label: "Dokumen", href: "/documents", icon: "Receipt", permission: "documents.view" },
-      { label: "Laporan", href: "/reports", icon: "Gauge", permission: "reports.view" },
-      { label: "Data Master", href: "/master-data/products", icon: "LayoutGrid", permission: "admin.master_data" },
-    ],
-  },
-  {
-    label: "Sistem",
-    items: [
-      { label: "Pengguna & Hak Akses", href: "/settings/users", icon: "Shield", permission: "admin.users" },
-      { label: "Pengaturan", href: "/settings", icon: "Settings", permission: "admin.settings" },
-    ],
-  },
+const navigation = [
+  { label: "Ringkasan", href: "/dashboard", icon: HouseIcon },
+  { label: "Pembelian", href: "/supply-chain/purchasing", icon: ReceiptIcon },
+  { label: "Penerimaan", href: "/supply-chain/receiving", icon: PackageIcon },
+  { label: "Kendali Mutu", href: "/supply-chain/qc", icon: ShieldIcon },
+  { label: "Persediaan", href: "/warehouse/inventory", icon: WarehouseIcon },
+  { label: "Penjualan", href: "/supply-chain/sales", icon: ReceiptIcon },
+  { label: "Pengambilan", href: "/supply-chain/picking", icon: GridIcon },
+  { label: "Pengiriman", href: "/supply-chain/delivery", icon: TruckIcon },
+  { label: "Retur", href: "/supply-chain/returns", icon: FileIcon },
+  { label: "Penyewaan", href: "/rental", icon: GaugeIcon },
+  { label: "Kontrak", href: "/rental/contracts", icon: FileIcon },
+  { label: "Penerimaan Barang", href: "/rental/receiving", icon: PackageIcon },
+  { label: "Pelepasan Barang", href: "/rental/release", icon: TruckIcon },
+  { label: "Penagihan", href: "/rental/billing", icon: ReceiptIcon },
+  { label: "Piutang", href: "/finance/receivables", icon: ReceiptIcon },
+  { label: "Hutang", href: "/finance/payables", icon: FileIcon },
+  { label: "Pembayaran", href: "/finance/payments", icon: ReceiptIcon },
+  { label: "Persetujuan", href: "/approval", icon: ShieldIcon },
+  { label: "Dokumen", href: "/documents", icon: FileIcon },
+  { label: "Laporan", href: "/reports", icon: GaugeIcon },
+  { label: "Data Master", href: "/master-data/products", icon: GridIcon },
+  { label: "Pengguna & Hak Akses", href: "/settings/users", icon: ShieldIcon },
+  { label: "Pengaturan", href: "/settings", icon: GaugeIcon },
 ];
 
 function SidebarLink({
@@ -398,18 +354,58 @@ export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
-  const [searchOpen, setSearchOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
-  const searchRef = useRef<HTMLInputElement>(null);
-  const { name, email, roleName, organizationName, permissions, isSuperUser, isDirector } = useSession();
+  const [identity, setIdentity] = useState({ name: "Pengguna", role: "", organization: "ASTADECA" });
 
-  const signOut = useCallback(async () => {
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadIdentity() {
+      try {
+        const supabase = createClient();
+        const { data: claimsData } = await supabase.auth.getClaims();
+        const claims = claimsData?.claims;
+        const userId = claims?.sub;
+        if (!userId) return;
+
+        const [{ data: profile }, { data: membership }] = await Promise.all([
+          supabase.from("profiles").select("full_name").eq("id", userId).maybeSingle(),
+          supabase.from("organization_memberships").select("organization_id, role_id").eq("user_id", userId).eq("is_active", true).maybeSingle(),
+        ]);
+
+        const [{ data: role }, { data: organization }] = membership
+          ? await Promise.all([
+              supabase.from("roles").select("name, code").eq("id", membership.role_id).maybeSingle(),
+              supabase.from("organizations").select("name").eq("id", membership.organization_id).maybeSingle(),
+            ])
+          : [{ data: null }, { data: null }];
+
+        if (!cancelled) {
+          setIdentity({
+            name: profile?.full_name || claims.email || "Pengguna",
+            role: role?.name || role?.code || "",
+            organization: organization?.name || "ASTADECA",
+          });
+        }
+      } catch {
+        if (!cancelled) setIdentity((current) => ({ ...current, role: "" }));
+      }
+    }
+
+    void loadIdentity();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  async function signOut() {
     const supabase = createClient();
     await supabase.auth.signOut();
     router.replace("/login");
     router.refresh();
-  }, [router]);
+  }
 
+  // Single source of truth: exact match OR controlled child-route match.
+  // Never matches overlapping siblings.
   function isSidebarActive(pathname: string, href: string): boolean {
     const clean = href.split("?")[0];
     if (pathname === clean) return true;
@@ -417,36 +413,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     return false;
   }
 
-  function canSee(perm?: string): boolean {
-    if (!perm) return true;
-    if (isSuperUser || isDirector) return true;
-    return permissions.has(perm as Parameters<typeof permissions.has>[0]);
-  }
-
-  const visibleGroups = NAV_GROUPS
-    .map((g) => ({ ...g, items: g.items.filter((i) => canSee(i.permission)) }))
-    .filter((g) => g.items.length > 0);
-
-  const searchResults = searchQuery.length > 1
-    ? visibleGroups.flatMap((g) =>
-        g.items
-          .filter((i) => i.label.toLowerCase().includes(searchQuery.toLowerCase()))
-          .map((i) => ({ ...i, group: g.label }))
-      )
-    : [];
-
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === "k") { e.preventDefault(); setSearchOpen(true); setTimeout(() => searchRef.current?.focus(), 50); }
-      if (e.key === "Escape") setSearchOpen(false);
-    };
-    document.addEventListener("keydown", handler);
-    return () => document.removeEventListener("keydown", handler);
-  }, []);
-
-  useEffect(() => { setMobileNavOpen(false); }, [pathname]);
-
-  const initials = name.split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0]).join("").toUpperCase() || "U";
+  const initials = identity.name.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join("").toUpperCase();
 
   return (
       <div className="min-h-screen bg-canvas text-ink">
@@ -467,16 +434,55 @@ export function AppShell({ children }: { children: ReactNode }) {
           </div>
 
           <nav className="scroll-slim flex-1 space-y-6 overflow-y-auto px-4 py-5">
-            {visibleGroups.map((group) => (
-              <div key={group.label}>
-                <p className="mb-1.5 px-3 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">{group.label}</p>
-                <div className="space-y-0.5">
-                  {group.items.map((item) => (
-                    <SidebarLink key={item.href} href={item.href} label={item.label} Icon={item.icon} active={isSidebarActive(pathname, item.href)} />
-                  ))}
-                </div>
+            <div>
+              <p className="px-3 pb-2 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">Ringkasan</p>
+              <SidebarLink href="/dashboard" label="Ringkasan" active={isSidebarActive(pathname, "/dashboard")} Icon={HouseIcon} />
+            </div>
+
+            <div>
+              <p className="px-3 pb-2 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">Operasional</p>
+              <div className="space-y-1">
+                {navigation.slice(1, 10).map((item) => (
+                  <SidebarLink key={item.label} href={item.href} label={item.label} Icon={item.icon} active={isSidebarActive(pathname, item.href)} />
+                ))}
               </div>
-            ))}
+            </div>
+
+            <div>
+              <p className="px-3 pb-2 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">Cold Storage</p>
+              <div className="space-y-1">
+                {navigation.slice(10, 15).map((item) => (
+                  <SidebarLink key={item.label} href={item.href} label={item.label} Icon={item.icon} active={isSidebarActive(pathname, item.href)} />
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <p className="px-3 pb-2 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">Keuangan</p>
+              <div className="space-y-1">
+                {navigation.slice(15, 18).map((item) => (
+                  <SidebarLink key={item.label} href={item.href} label={item.label} Icon={item.icon} active={isSidebarActive(pathname, item.href)} />
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <p className="px-3 pb-2 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">Manajemen</p>
+              <div className="space-y-1">
+                {navigation.slice(18, 21).map((item) => (
+                  <SidebarLink key={item.label} href={item.href} label={item.label} Icon={item.icon} active={isSidebarActive(pathname, item.href)} />
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <p className="px-3 pb-2 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">Sistem</p>
+              <div className="space-y-1">
+                {navigation.slice(21).map((item) => (
+                  <SidebarLink key={item.label} href={item.href} label={item.label} Icon={item.icon} active={isSidebarActive(pathname, item.href)} />
+                ))}
+              </div>
+            </div>
           </nav>
         </aside>
 
@@ -501,8 +507,8 @@ export function AppShell({ children }: { children: ReactNode }) {
                 <div className="flex items-center gap-3 rounded-xl border border-line/80 bg-gradient-to-b from-white to-[#f3f7f7] px-3 py-2 shadow-[inset_0_1px_0_white,0_2px_5px_rgb(20_35_43_/_5%)]">
                   <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-primary to-[#31a79e] font-display text-xs font-bold text-white shadow-[0_2px_5px_rgb(8_126_139_/_25%)]">{initials || "U"}</div>
                   <div className="text-left">
-                    <p className="max-w-40 truncate text-sm font-semibold text-ink">{name || email || "Pengguna"}</p>
-                    <p className="text-[11px] text-slate-500">{roleName || organizationName || "Akun"}</p>
+                    <p className="max-w-40 truncate text-sm font-semibold text-ink">{identity.name}</p>
+                    <p className="text-[11px] text-slate-500">{identity.role || "Akun"}</p>
                   </div>
                 </div>
                 <button type="button" onClick={() => void signOut()} className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-line text-slate-600 transition-colors hover:bg-slate-50" aria-label="Keluar" title="Keluar">
