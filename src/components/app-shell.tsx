@@ -316,7 +316,7 @@ export const NAV_GROUPS = [
     items: [
       { label: "Pembelian", href: "/supply-chain/purchasing", icon: ReceiptIcon, permission: "purchase.view" },
       { label: "Penerimaan", href: "/supply-chain/receiving", icon: PackageIcon, permission: "inventory.receive" },
-      { label: "Kendali Mutu", href: "/supply-chain/qc", icon: ShieldIcon, permission: "inventory.adjust" },
+      { label: "Quality Control", href: "/supply-chain/qc", icon: ShieldIcon, permission: "inventory.adjust" },
       { label: "Persediaan", href: "/warehouse/inventory", icon: WarehouseIcon, permission: "inventory.view" },
       { label: "Penjualan", href: "/supply-chain/sales", icon: ReceiptIcon, permission: "sales.view" },
       { label: "Pengambilan", href: "/supply-chain/picking", icon: GridIcon, permission: "inventory.view" },

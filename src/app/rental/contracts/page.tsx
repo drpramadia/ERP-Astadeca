@@ -77,7 +77,7 @@ export default function RentalContractsPage() {
   async function loadContracts(orgId: string) {
     const { data, error: queryError } = await createClient()
       .from("rental_contracts")
-      .select("*, customers(name, code)")
+      .select("*, rental_contracts_customer_fkey(name, code)")
       .eq("organization_id", orgId)
       .order("created_at", { ascending: false });
     if (queryError) throw queryError;

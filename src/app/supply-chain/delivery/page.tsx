@@ -18,23 +18,29 @@ interface DeliveryOrder {
   sales_order_id?: string;
   customer_id: string;
   status: string;
-  scheduled_date?: string;
-  shipped_date?: string;
-  delivered_date?: string;
+  delivery_date?: string;
+  vehicle_number?: string;
+  driver_name?: string;
   recipient_name?: string;
-  recipient_signature_url?: string;
+  recipient_address?: string;
+  pod_received_at?: string;
+  pod_recipient_signature?: string;
+  pod_notes?: string;
   notes?: string;
-  customers?: { name: string; code: string };
+  created_by?: string;
+  created_at: string;
+  // embedded relations (use FK name to avoid ambiguity)
+  delivery_orders_customer_fk?: { name: string; code: string };
   sales_orders?: { order_number: string };
 }
 
 interface CreateForm {
   customerId: string;
-  scheduledDate: string;
+  deliveryDate: string;
   notes: string;
 }
 
-const EMPTY_FORM: CreateForm = { customerId: "", scheduledDate: "", notes: "" };
+const EMPTY_FORM: CreateForm = { customerId: "", deliveryDate: "", notes: "" };
 
 export default function DeliveryPage() {
   const { userId, loaded } = useSession();
@@ -61,9 +67,9 @@ export default function DeliveryPage() {
     const [{ data: deliveryData }, { data: customerData }] = await Promise.all([
       supabase
         .from("delivery_orders")
-        .select("*, customers(name, code), sales_orders(order_number)")
+        .select("*, delivery_orders_customer_fk(name, code), sales_orders(order_number)")
         .eq("organization_id", orgId)
-        .order("scheduled_date", { ascending: false })
+        .order("delivery_date", { ascending: false })
         .limit(50),
       supabase
         .from("customers")
@@ -114,7 +120,7 @@ export default function DeliveryPage() {
   }, []);
 
   const handleCreateDeliveryOrder = useCallback(async () => {
-    if (!createForm.customerId || !createForm.scheduledDate) {
+    if (!createForm.customerId || !createForm.deliveryDate) {
       setActionMessage({ type: "error", text: "Customer dan tanggal jadwal wajib diisi." });
       return;
     }
@@ -135,7 +141,7 @@ export default function DeliveryPage() {
         organization_id: membership.organization_id,
         customer_id: createForm.customerId,
         status: "DRAFT",
-        scheduled_date: createForm.scheduledDate,
+        delivery_date: createForm.deliveryDate || null,
         notes: createForm.notes || null,
       });
 
@@ -161,7 +167,7 @@ export default function DeliveryPage() {
       const supabase = createClient();
       const { error } = await supabase
         .from("delivery_orders")
-        .update({ status: "IN_TRANSIT", shipped_date: new Date().toISOString() })
+        .update({ status: "IN_TRANSIT", delivery_date: new Date().toISOString().slice(0, 10) })
         .eq("id", delivery.id);
 
       if (error) throw error;
@@ -263,13 +269,13 @@ export default function DeliveryPage() {
                         <td className="px-4 py-3 text-sm font-mono font-medium text-ink">{delivery.do_number}</td>
                         <td className="px-4 py-3 text-sm text-ink">{delivery.sales_orders?.order_number || "-"}</td>
                         <td className="px-4 py-3">
-                          <p className="text-sm font-medium text-ink">{delivery.customers?.name || "-"}</p>
-                          <p className="text-xs text-slate-500">{delivery.customers?.code || "-"}</p>
+                          <p className="text-sm font-medium text-ink">{delivery.delivery_orders_customer_fk?.name || "−"}</p>
+                          <p className="text-xs text-slate-500">{delivery.delivery_orders_customer_fk?.code || "−"}</p>
                         </td>
                         <td className="px-4 py-3 text-sm text-ink">
-                          {delivery.scheduled_date ? formatDate(delivery.scheduled_date) : "-"}
-                          {delivery.delivered_date && <br />}
-                          {delivery.delivered_date && <span className="text-xs text-slate-500">Diterima: {formatDate(delivery.delivered_date)}</span>}
+                          {delivery.delivery_date ? formatDate(delivery.delivery_date) : "−"}
+                          {delivery.pod_received_at && <br />}
+                          {delivery.pod_received_at && <span className="text-xs text-slate-500">Diterima: {formatDate(delivery.pod_received_at)}</span>}
                         </td>
                         <td className="px-4 py-3 text-sm text-ink">{delivery.recipient_name || "-"}</td>
                         <td className="px-4 py-3 text-center">
@@ -329,8 +335,8 @@ export default function DeliveryPage() {
           <Input
             label="Tanggal Jadwal"
             type="date"
-            value={createForm.scheduledDate}
-            onChange={(e) => setCreateForm((f) => ({ ...f, scheduledDate: e.target.value }))}
+            value={createForm.deliveryDate}
+            onChange={(e) => setCreateForm((f) => ({ ...f, deliveryDate: e.target.value }))}
           />
           <div>
             <label className="mb-1.5 block text-sm font-medium text-ink">Catatan</label>
@@ -381,8 +387,8 @@ export default function DeliveryPage() {
               </div>
               <div>
                 <p className="text-xs text-slate-500">Customer</p>
-                <p className="font-medium text-ink">{selectedDelivery.customers?.name || "-"}</p>
-                <p className="text-xs text-slate-500">{selectedDelivery.customers?.code || ""}</p>
+                <p className="font-medium text-ink">{selectedDelivery.delivery_orders_customer_fk?.name || "−"}</p>
+                <p className="text-xs text-slate-500">{selectedDelivery.delivery_orders_customer_fk?.code || ""}</p>
               </div>
               <div>
                 <p className="text-xs text-slate-500">Sales Order</p>
@@ -390,7 +396,7 @@ export default function DeliveryPage() {
               </div>
               <div>
                 <p className="text-xs text-slate-500">Jadwal</p>
-                <p className="text-ink">{selectedDelivery.scheduled_date ? formatDate(selectedDelivery.scheduled_date) : "-"}</p>
+                <p className="text-ink">{selectedDelivery.delivery_date ? formatDate(selectedDelivery.delivery_date) : "−"}</p>
               </div>
               <div>
                 <p className="text-xs text-slate-500">Penerima</p>
@@ -398,11 +404,11 @@ export default function DeliveryPage() {
               </div>
               <div>
                 <p className="text-xs text-slate-500">Dikirim</p>
-                <p className="text-ink">{selectedDelivery.shipped_date ? formatDate(selectedDelivery.shipped_date) : "-"}</p>
+                <p className="text-ink">{selectedDelivery.delivery_date ? formatDate(selectedDelivery.delivery_date) : "−"}</p>
               </div>
               <div>
                 <p className="text-xs text-slate-500">Diterima</p>
-                <p className="text-ink">{selectedDelivery.delivered_date ? formatDate(selectedDelivery.delivered_date) : "-"}</p>
+                <p className="text-ink">{selectedDelivery.pod_received_at ? formatDate(selectedDelivery.pod_received_at) : "−"}</p>
               </div>
             </div>
             {selectedDelivery.notes && (
