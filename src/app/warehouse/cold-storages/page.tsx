@@ -147,7 +147,7 @@ export default function ColdStoragesPage() {
     const { data } = await supabase
       .from("storage_locations")
       .select(`
-        id, code, row, column, status, current_kg, current_units,
+        id, code, aisle, rack, zone, capacity_kg, active,
         inventory(id, quantity, quantity_kg, products(name, sku), batches(batch_number, expiry_date))
       `)
       .eq("cold_storage_id", storage.id)
@@ -179,7 +179,7 @@ export default function ColdStoragesPage() {
       const { data } = await supabase
         .from("storage_locations")
         .select(`
-          id, code, row, column, status, current_kg, current_units,
+          id, code, aisle, rack, zone, capacity_kg, active,
           inventory(id, quantity, quantity_kg, products(name, sku), batches(batch_number, expiry_date))
         `)
         .eq("id", bin.id)

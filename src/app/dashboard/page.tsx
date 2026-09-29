@@ -24,7 +24,7 @@ async function getDashboardData(organizationId: string) {
     supabase.from("approval_requests").select("id, status").eq("organization_id", organizationId).eq("status", "PENDING"),
     supabase.from("inventory_movements").select("id, movement_type, quantity_kg, performed_at, products!movements_product_id_fkey(name, sku), batches!movements_batch_id_fkey(batch_number), profiles!movements_performed_by_fkey(full_name)").eq("organization_id", organizationId).order("performed_at", { ascending: false }).limit(8),
     supabase.from("inventory").select("quantity_kg").eq("organization_id", organizationId).in("status", ["AVAILABLE", "QUARANTINE", "RESERVED"]),
-    supabase.from("inventory").select("id, quantity_kg, expiry_date").eq("organization_id", organizationId).eq("status", "AVAILABLE").lt("expiry_date", new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()).neq("expiry_date", ""),
+    supabase.from("inventory").select("id, quantity_kg, batches!inventory_batch_fkey(expiry_date)").eq("organization_id", organizationId).eq("status", "AVAILABLE").not("batches.expiry_date", "is", null).lt("batches.expiry_date", new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)),
     supabase.from("purchase_orders").select("id").eq("organization_id", organizationId).in("status", ["PENDING_APPROVAL", "SUBMITTED"]),
     supabase.from("sales_orders").select("id").eq("organization_id", organizationId).in("status", ["PENDING_APPROVAL", "SUBMITTED"]),
     supabase.from("delivery_orders").select("id").eq("organization_id", organizationId).eq("status", "IN_TRANSIT"),

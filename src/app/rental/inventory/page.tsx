@@ -46,7 +46,7 @@ export default function RentalInventoryPage() {
       if (!membership) return;
       const { data } = await supabase
         .from("rental_allocations")
-        .select("*, contracts(contract_number, title), customers(name), products(name, sku), cold_storages(name, code), storage_locations(name, code), batches(batch_number)")
+        .select("*, rental_contracts!rental_allocations_contract_fkey(contract_number, title), customers(name), products(name, sku), cold_storages(name, code), storage_locations(name, code), batches(batch_number)")
         .eq("organization_id", membership.organization_id)
         .order("allocated_at", { ascending: false });
 

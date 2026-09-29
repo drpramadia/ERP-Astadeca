@@ -77,7 +77,7 @@ export default function MovementsPage() {
       const supabase = createClient();
       let query = supabase
         .from("inventory_movements")
-        .select("id, movement_number, movement_type, quantity, quantity_kg, reference_number, performed_at, notes, products(name, sku), batches(batch_number), profiles!inventory_movements_performed_by_fkey(full_name)")
+        .select("id, movement_number, movement_type, quantity, quantity_kg, reference_number, performed_at, notes, products(name, sku), batches(batch_number), profiles!movements_performed_by_fkey(full_name)")
         .eq("organization_id", organizationId)
         .order("performed_at", { ascending: false })
         .limit(100);

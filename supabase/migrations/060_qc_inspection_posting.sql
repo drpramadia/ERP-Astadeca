@@ -69,11 +69,13 @@ $function$;
 -- 2. Record the QC decision and post accepted goods into stock
 -- ============================================================
 CREATE OR REPLACE FUNCTION public.apply_qc_inspection(
-  p_inspection_id uuid,
-  p_status        text,          -- ACCEPTED | PARTIAL_ACCEPT | QUARANTINE | REJECTED | PASSED | FAILED
-  p_result        text DEFAULT NULL,  -- PASS | FAIL | CONDITIONAL | HOLD
-  p_notes         text DEFAULT NULL,
-  p_performed_by  uuid DEFAULT NULL
+  p_inspection_id      uuid,
+  p_status             text,
+  p_result             text DEFAULT NULL,
+  p_notes              text DEFAULT NULL,
+  p_performed_by       uuid DEFAULT NULL,
+  p_checklist_data     jsonb DEFAULT NULL,
+  p_evidence_photos    jsonb DEFAULT NULL
 )
 RETURNS TABLE(result uuid, msg text)
 LANGUAGE plpgsql
@@ -119,11 +121,13 @@ BEGIN
   -- `result` is also an OUT parameter of this function, so the column must be
   -- qualified or PL/pgSQL reports an ambiguous column reference (42702).
   UPDATE qc_inspections
-  SET status       = p_status,
-      result       = COALESCE(p_result, qc_inspections.result),
-      notes        = COALESCE(p_notes, qc_inspections.notes),
-      inspector_id = COALESCE(p_performed_by, qc_inspections.inspector_id),
-      inspected_at = now()
+  SET status          = p_status,
+      result          = COALESCE(p_result, qc_inspections.result),
+      notes           = COALESCE(p_notes, qc_inspections.notes),
+      inspector_id    = COALESCE(p_performed_by, qc_inspections.inspector_id),
+      inspected_at    = now(),
+      checklist_data  = COALESCE(p_checklist_data, qc_inspections.checklist_data),
+      evidence_photos = COALESCE(p_evidence_photos, qc_inspections.evidence_photos)
   WHERE id = p_inspection_id;
 
   UPDATE receiving_items

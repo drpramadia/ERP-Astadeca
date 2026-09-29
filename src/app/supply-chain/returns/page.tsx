@@ -87,7 +87,7 @@ export default function ReturnsPage() {
       supabase.from("suppliers").select("id, code, name").eq("organization_id", orgId).eq("active", true).order("name"),
       supabase.from("products").select("id, sku, name, unit_id, units(code)").eq("organization_id", orgId).eq("active", true).order("name"),
       supabase.from("batches").select("id, batch_number, product_id").eq("organization_id", orgId).eq("status", "ACTIVE").order("batch_number"),
-      supabase.from("storage_locations").select("id, code, name, cold_storage_id, warehouse_id, cold_storages(code)").eq("organization_id", orgId).eq("active", true).order("code"),
+      supabase.from("storage_locations").select("id, code, name, cold_storage_id, cold_storages(code, warehouse_id)").eq("organization_id", orgId).eq("active", true).order("code"),
       supabase.from("inventory").select("id, quantity, quantity_kg, status, product_id, batch_id, warehouse_id, cold_storage_id, storage_location_id, unit_id, products(name, sku), batches(batch_number), cold_storages(code), storage_locations(code)").eq("organization_id", orgId).eq("owner_type", "COMPANY").eq("owner_id", orgId).eq("status", "AVAILABLE").gt("quantity", 0).order("created_at", { ascending: false }),
       supabase.from("inventory_returns").select("id, return_number, return_type, reason, status, notes, created_at, inventory_return_items(quantity_kg, products(name))").eq("organization_id", orgId).order("created_at", { ascending: false }).limit(50),
     ]);

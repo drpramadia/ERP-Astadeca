@@ -19,10 +19,28 @@ const reportOptions = [
   { value: "revenue", label: "Rental revenue" },
 ];
 
+function getNestedValue(obj: unknown, path: string): unknown {
+  // e.g. "products.name" -> obj.products.name
+  if (typeof path !== "string") return undefined;
+  return path.split(".").reduce((curr: unknown, key: string) => {
+    if (curr === null || curr === undefined) return undefined;
+    return (curr as Record<string, unknown>)[key];
+  }, obj);
+}
+
 function formatCell(key: string, value: unknown) {
-  if (value === null || value === undefined || value === "") return "-";
+  if (value === null || value === undefined || value === "") return "—";
   if (typeof value === "boolean") return value ? "Ya" : "Tidak";
   if (typeof value === "number") return formatNumber(value);
+  // Dot-notation key: value is the root object, key is e.g. "products.name"
+  if (key.includes(".")) {
+    const nested = getNestedValue(value, key.split(".").slice(1).join("."));
+    if (nested === null || nested === undefined || nested === "") return "—";
+    if (typeof nested === "boolean") return nested ? "Ya" : "Tidak";
+    if (typeof nested === "number") return formatNumber(nested);
+    if (typeof nested === "string" && /(date|at|expiry|start|end)/i.test(key) && !Number.isNaN(Date.parse(nested))) return formatDate(nested);
+    return String(nested);
+  }
   if (typeof value === "string" && /(date|at|expiry|start|end)/i.test(key) && !Number.isNaN(Date.parse(value))) return formatDate(value);
   return String(value);
 }
@@ -80,7 +98,21 @@ export default function ReportsPage() {
     return () => { cancelled = true; };
   }, [report, organizationId]);
 
-  const columns = rows.length ? Object.keys(rows[0]).filter((key) => !["id", "organization_id"].includes(key)) : [];
+  // Supabase embed returns nested objects; flatten one level so {products:{name,x},batches:{batch_number,y}}
+  // becomes "products.name","batches.batch_number","batches.expiry_date" as separate columns.
+  // Objects that are arrays (e.g. products: [{}]) are skipped — they should be handled by a dedicated renderer.
+  const columns = rows.length
+    ? Object.entries(rows[0] as Record<string, unknown>)
+        .filter(([k]) => !["id", "organization_id"].includes(k))
+        .flatMap(([k, v]) => {
+          if (v !== null && typeof v === "object" && !Array.isArray(v)) {
+            return Object.entries(v as Record<string, unknown>).map(
+              ([nk]) => `${k}.${nk}`
+            );
+          }
+          return [k];
+        })
+    : [];
 
   return (
     <AppShell>
@@ -89,7 +121,7 @@ export default function ReportsPage() {
         <div className="mb-5 flex max-w-md items-end gap-3 border-b border-line pb-4"><Select label="Jenis laporan" options={reportOptions} value={report} onChange={(event) => setReport(event.target.value as ReportKind)} /><span className="pb-2 text-sm text-slate-500">{rows.length} baris</span></div>
         {error && <div role="alert" className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900"><p className="font-medium">Laporan belum tersedia</p><p className="mt-1">{error}</p></div>}
         {isLoading ? <div className="flex h-48 items-center justify-center text-sm text-slate-500">Memuat laporan...</div> : !error && rows.length === 0 ? <div className="rounded-xl border border-dashed border-line bg-white p-10 text-center text-sm text-slate-500">Tidak ada data untuk laporan ini.</div> : rows.length > 0 ? (
-          <div className="table-scroll rounded-xl border border-line bg-white"><table className="w-full min-w-[760px]"><thead><tr className="border-b border-line bg-slate-50 text-left text-xs font-semibold uppercase text-slate-600">{columns.map((column) => <th key={column} className="px-4 py-3">{column.replaceAll("_", " ")}</th>)}</tr></thead><tbody className="divide-y divide-line">{rows.map((row, index) => <tr key={String(row.id || index)}>{columns.map((column) => <td key={column} className="max-w-64 px-4 py-3 text-sm text-ink">{formatCell(column, row[column])}</td>)}</tr>)}</tbody></table></div>
+          <div className="table-scroll rounded-xl border border-line bg-white"><table className="w-full min-w-[760px]"><thead><tr className="border-b border-line bg-slate-50 text-left text-xs font-semibold uppercase text-slate-600">{columns.map((column) => <th key={column} className="px-4 py-3">{column.replaceAll("_", " ").replace(/\./g, " › ")}</th>)}</tr></thead><tbody className="divide-y divide-line">{rows.map((row, index) => <tr key={String(row.id || index)}>{columns.map((column) => <td key={column} className="max-w-64 px-4 py-3 text-sm text-ink">{formatCell(column, getNestedValue(row, column))}</td>)}</tr>)}</tbody></table></div>
         ) : null}
       </div>
     </AppShell>

@@ -136,7 +136,7 @@ export default function ReceivingPage() {
     const [poRes, csRes, locRes] = await Promise.all([
       supabase
         .from("purchase_orders")
-        .select("id, po_number, order_date, expected_date, status, suppliers(name, code), purchase_order_items(id, product_id, quantity, unit_id, unit_price, received_quantity, products(id, name, sku, unit_id), units(id, code))")
+        .select("id, po_number, order_date, expected_date, status, suppliers(name, code), purchase_order_items(id, product_id, quantity, unit_id, unit_price, received_quantity, products(id, name, sku, unit_id))")
         .eq("organization_id", organizationId)
         .eq("status", "APPROVED")
         .order("order_date", { ascending: false })

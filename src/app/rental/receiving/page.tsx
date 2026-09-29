@@ -109,7 +109,7 @@ export default function RentalReceivingPage() {
           .order("contract_number"),
         supabase
           .from("products")
-          .select("id, name, sku, code")
+          .select("id, name, sku")
           .eq("organization_id", orgId)
           .eq("active", true)
           .order("name"),

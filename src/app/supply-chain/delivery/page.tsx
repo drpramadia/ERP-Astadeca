@@ -67,7 +67,7 @@ export default function DeliveryPage() {
     const [{ data: deliveryData }, { data: customerData }] = await Promise.all([
       supabase
         .from("delivery_orders")
-        .select("*, delivery_orders_customer_fk(name, code), sales_orders(order_number)")
+        .select("*, do_customer_fk(name, code), sales_orders(order_number)")
         .eq("organization_id", orgId)
         .order("delivery_date", { ascending: false })
         .limit(50),
