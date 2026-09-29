@@ -30,6 +30,9 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
+# Supabase CLI temp metadata
+supabase/.temp/
+
 # env files (can opt-in for committing if needed)
 .env*
 
@@ -41,4 +44,3 @@ yarn-error.log*
 next-env.d.ts
 scripts/audit-receiving.mjs scripts/audit-receiving-rental.mjs scripts/audit-routes-auth.mjs scripts/db_functions.txt scripts/def_create_rate.json scripts/def_generate_contract_number.json scripts/def_generate_contract_number.sql scripts/def_grn.json scripts/def_rate.json scripts/def_receive_rental_stock.json scripts/def_receive_rental_stock.sql scripts/diagnose-bell.mjs scripts/route-audit.sh scripts/send-notification.mjs scripts/verify-notifications.mjs scripts/verify-rpc.mjs scripts/verify-workflow.mjs
 
-.vercel

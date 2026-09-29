@@ -56,12 +56,7 @@ interface FormData {
 
 // ─── Constants ─────────────────────────────────────────────────────────────────
 
-const STATUS_OPTIONS = [
-  { value: "ACTIVE", label: "Aktif" },
-  { value: "MAINTENANCE", label: "Perawatan" },
-  { value: "INACTIVE", label: "Nonaktif" },
-];
-
+// STATUS_OPTIONS and STATUS_BADGE kept for future status-filter UI
 const STATUS_BADGE: Record<string, { label: string; cls: string }> = {
   ACTIVE: { label: "Aktif", cls: "bg-emerald-50 text-emerald-700 border border-emerald-200" },
   MAINTENANCE: { label: "Perawatan", cls: "bg-amber-50 text-amber-700 border border-amber-200" },
@@ -161,25 +156,8 @@ export default function ColdStoragesPage() {
     if (data && data.length > 0) {
       setBins(data as unknown as StorageBin[]);
     } else {
-      // Generate mock bins if none exist
-      const mockBins: StorageBin[] = [];
-      for (let r = 1; r <= storage.rows; r++) {
-        for (let c = 1; c <= storage.columns; c++) {
-          const rand = Math.random();
-          const status: StorageBin["status"] =
-            rand < 0.5 ? "OCCUPIED" : rand < 0.8 ? "EMPTY" : "RESERVED";
-          mockBins.push({
-            id: `${storage.id}-${r}-${c}`,
-            code: `${String.fromCharCode(64 + r)}${c}`,
-            row: r,
-            column: c,
-            status,
-            current_kg: status === "OCCUPIED" ? Math.round(Math.random() * 500 + 50) : null,
-            current_units: status === "OCCUPIED" ? Math.round(Math.random() * 10 + 1) : null,
-          });
-        }
-      }
-      setBins(mockBins);
+      // No storage_locations exist yet — show empty state, not fake data
+      setBins([]);
     }
   }, []);
 
