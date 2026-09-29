@@ -130,13 +130,14 @@ export default function SalesPage() {
       const orgId = membership.organization_id;
       setOrgId(orgId);
 
+      // Order matters: the destructuring names mirror this array positionally.
       const [ordersRes, quotationsRes, productsRes, customersRes, unitsRes, stockRes] = await Promise.all([
         supabase.from("sales_orders").select("*, so_customer_fk(name, code)").eq("organization_id", orgId).order("order_date", { ascending: false }).limit(50),
         supabase.from("quotations").select("*, qt_customer_fk(name, code)").eq("organization_id", orgId).order("quotation_date", { ascending: false }).limit(50),
         supabase.from("products").select("id, name, sku").eq("organization_id", orgId).order("name"),
         supabase.from("customers").select("id, name, code").eq("active", true).order("name"),
-        supabase.from("inventory_levels").select("product_id, available_quantity, minimum_stock").eq("organization_id", orgId),
         supabase.from("units").select("id, code, name").eq("active", true).order("name"),
+        supabase.from("inventory_levels").select("product_id, available_quantity, minimum_stock").eq("organization_id", orgId),
       ]) as unknown as [{data: any},{data: any},{data: any},{data: any},{data: any},{data: any}];
 
       setOrders(ordersRes?.data || []);

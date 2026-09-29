@@ -134,7 +134,7 @@ export default function PurchasingPage() {
         p_expected_date: poForm.expectedDate || null,
         p_items: items,
         p_notes: poForm.notes,
-        p_requester_id: userId,
+        p_created_by: userId,
       } as Record<string, unknown>);
       if (error) throw error;
       setShowCreatePO(false);
