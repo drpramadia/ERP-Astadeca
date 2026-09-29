@@ -1,210 +1,595 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { AppShell } from "@/components/app-shell";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
 import { createClient } from "@/lib/supabase/client";
-import { formatDate, formatNumber } from "@/lib/utils";
 
-interface Option {
-  id: string;
-  name: string;
-  code?: string;
-  customer_id?: string;
-  product_id?: string;
-  status?: string;
-  start_date?: string;
-  end_date?: string | null;
-  unit_id?: string;
-}
+// ─── Types ────────────────────────────────────────────────────────────────────
 
 interface ContractOption {
   id: string;
   contract_number: string;
   title: string;
   customer_id: string;
+  customer_name?: string;
 }
 
-interface LocationOption extends Option {
-  cold_storage_id: string;
-}
-
-interface Receipt {
+interface ProductOption {
   id: string;
-  movement_number: string;
-  movement_type: string;
-  quantity_kg: number;
-  performed_at: string;
-  customers: { name: string } | null;
-  products: { name: string } | null;
-  batches: { batch_number: string } | null;
+  name: string;
+  sku?: string;
+  code?: string;
 }
 
-const emptyForm = {
-  contractId: "", productId: "", storageId: "", locationId: "", unitId: "",
-  quantity: "", batchNumber: "", productionDate: "", expiryDate: "", notes: "",
-};
+interface ItemRow {
+  id: number;
+  productId: string;
+  batchNumber: string;
+  qtyKg: string;
+  productionDate: string;
+  expiryDate: string;
+  binLocation: string;
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function newRow(id: number): ItemRow {
+  return {
+    id,
+    productId: "",
+    batchNumber: "",
+    qtyKg: "",
+    productionDate: "",
+    expiryDate: "",
+    binLocation: "",
+  };
+}
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function RentalReceivingPage() {
+  const supabase = createClient();
+
   const [organizationId, setOrganizationId] = useState<string | null>(null);
   const [actorId, setActorId] = useState<string | null>(null);
-  const [customers, setCustomers] = useState<Option[]>([]);
+
+  // Step 1
   const [contracts, setContracts] = useState<ContractOption[]>([]);
-  const [products, setProducts] = useState<Option[]>([]);
-  const [storages, setStorages] = useState<Option[]>([]);
-  const [locations, setLocations] = useState<LocationOption[]>([]);
-  const [units, setUnits] = useState<Option[]>([]);
-  const [receipts, setReceipts] = useState<Receipt[]>([]);
-  const [form, setForm] = useState(emptyForm);
+  const [selectedContractId, setSelectedContractId] = useState<string>("");
+  const [notes, setNotes] = useState<string>("");
+
+  // Step 2 — dynamic item lines
+  const [lines, setLines] = useState<ItemRow[]>([newRow(1)]);
+  const [nextId, setNextId] = useState(2);
+
+  // Products
+  const [products, setProducts] = useState<ProductOption[]>([]);
+
+  // UI
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
 
-  async function load(organization: string, userId: string) {
-    const supabase = createClient();
-    const [customerResult, contractResult, productResult, storageResult, locationResult, unitResult, receiptResult] = await Promise.all([
-      supabase.from("customers").select("id, name, code").eq("organization_id", organization).eq("active", true).eq("is_rental_customer", true).order("name"),
-      supabase.from("rental_contracts").select("id, contract_number, title, customer_id, status, start_date, end_date").eq("organization_id", organization).eq("status", "ACTIVE").order("contract_number"),
-      supabase.from("products").select("id, name, sku, unit_id").eq("organization_id", organization).eq("active", true).order("name"),
-      supabase.from("cold_storages").select("id, name, code").eq("organization_id", organization).eq("status", "ACTIVE").order("code"),
-      supabase.from("storage_locations").select("id, name, code, cold_storage_id").eq("organization_id", organization).eq("active", true).order("code"),
-      supabase.from("units").select("id, name, code").eq("organization_id", organization).eq("active", true).order("code"),
-      supabase.from("rental_stock_movements").select("id, movement_number, movement_type, quantity_kg, performed_at, customers(name), products(name), batches(batch_number)").eq("organization_id", organization).eq("movement_type", "RECEIVE").order("performed_at", { ascending: false }).limit(30),
-    ]);
-    const failed = [customerResult, contractResult, productResult, storageResult, locationResult, unitResult, receiptResult].find((result) => result.error);
-    if (failed?.error) throw failed.error;
-    setOrganizationId(organization);
+  // ─── Load contracts + products ───────────────────────────────────────────────
+  const load = useCallback(async (orgId: string, userId: string) => {
+    const [{ data: contractData, error: contractErr }, { data: productData, error: productErr }] =
+      await Promise.all([
+        supabase
+          .from("rental_contracts")
+          .select("id, contract_number, title, customer_id, rental_contracts_customer_fkey(name)")
+          .eq("organization_id", orgId)
+          .eq("status", "ACTIVE")
+          .order("contract_number"),
+        supabase
+          .from("products")
+          .select("id, name, sku, code")
+          .eq("organization_id", orgId)
+          .eq("active", true)
+          .order("name"),
+      ]);
+
+    if (contractErr) throw contractErr;
+    if (productErr) throw productErr;
+
+    setOrganizationId(orgId);
     setActorId(userId);
-    setCustomers((customerResult.data || []) as Option[]);
-    setContracts((contractResult.data || []) as ContractOption[]);
-    setProducts((productResult.data || []) as Option[]);
-    setStorages((storageResult.data || []) as Option[]);
-    setLocations((locationResult.data || []) as LocationOption[]);
-    setUnits((unitResult.data || []) as Option[]);
-    setReceipts((receiptResult.data || []) as unknown as Receipt[]);
-  }
+    setContracts(
+      (contractData ?? []).map((c: Record<string, unknown>) => ({
+        id: c.id as string,
+        contract_number: c.contract_number as string,
+        title: c.title as string,
+        customer_id: c.customer_id as string,
+        customer_name: ((c.rental_contracts_customer_fkey as Record<string, unknown>)?.name as string) ?? "",
+      }))
+    );
+    setProducts(
+      (productData ?? []).map((p: Record<string, unknown>) => ({
+        id: p.id as string,
+        name: p.name as string,
+        sku: p.sku as string | undefined,
+        code: p.code as string | undefined,
+      }))
+    );
+  }, [supabase]);
 
   useEffect(() => {
     let cancelled = false;
-    async function initialize() {
+    async function init() {
       try {
-        const supabase = createClient();
         const { data: claimsData } = await supabase.auth.getClaims();
-        const userId = claimsData?.claims?.sub;
-        if (!userId) throw new Error("Silakan login untuk menerima stok rental.");
-        const { data: membership, error: membershipError } = await supabase.from("organization_memberships").select("organization_id").eq("user_id", userId).eq("is_active", true).maybeSingle();
-        if (membershipError) throw membershipError;
+        const userId = (claimsData?.claims as { sub?: string })?.sub;
+        if (!userId) throw new Error("Silakan login untuk mengakses halaman ini.");
+        const { data: membership, error: membershipErr } = await supabase
+          .from("organization_memberships")
+          .select("organization_id")
+          .eq("user_id", userId)
+          .eq("is_active", true)
+          .maybeSingle();
+        if (membershipErr) throw membershipErr;
         if (!membership) throw new Error("Akun belum memiliki organisasi aktif.");
         await load(membership.organization_id, userId);
-      } catch (loadError) {
-        if (!cancelled) setError(loadError instanceof Error ? loadError.message : "Gagal memuat data penerimaan.");
+      } catch (e) {
+        if (!cancelled) setError(e instanceof Error ? e.message : "Gagal memuat data.");
       } finally {
         if (!cancelled) setIsLoading(false);
       }
     }
-    void initialize();
+    void init();
     return () => { cancelled = true; };
-  }, []);
+  }, [load, supabase]);
 
-  const selectedContract = contracts.find((contract) => contract.id === form.contractId);
-  const selectedProduct = products.find((product) => product.id === form.productId);
-  const customer = customers.find((item) => item.id === selectedContract?.customer_id);
-  const filteredLocations = locations.filter((location) => location.cold_storage_id === form.storageId);
+  // ─── Line helpers ────────────────────────────────────────────────────────────
+  function updateLine(id: number, field: keyof ItemRow, value: string) {
+    setLines((prev) => prev.map((l) => (l.id === id ? { ...l, [field]: value } : l)));
+  }
 
-  async function receive(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!organizationId || !actorId || !selectedContract || !selectedProduct) return;
-    const quantity = Number(form.quantity);
-    if (!Number.isFinite(quantity) || quantity <= 0) {
-      setError("Jumlah harus lebih besar dari nol.");
+  function addLine() {
+    setLines((prev) => [...prev, newRow(nextId)]);
+    setNextId((n) => n + 1);
+  }
+
+  function removeLine(id: number) {
+    if (lines.length <= 1) return;
+    setLines((prev) => prev.filter((l) => l.id !== id));
+  }
+
+  // ─── Submit ──────────────────────────────────────────────────────────────────
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!organizationId || !actorId || !selectedContractId) return;
+
+    const filledLines = lines.filter((l) => l.productId || l.batchNumber || l.qtyKg);
+    if (filledLines.length === 0) {
+      setError("Tambahkan minimal satu item sebelum menyimpan.");
       return;
     }
-    if (!form.batchNumber.trim() || !form.storageId || !form.locationId || !form.unitId) {
-      setError("Batch, cold storage, lokasi, dan satuan wajib diisi.");
+    const invalid = filledLines.some(
+      (l) => !l.productId || !l.batchNumber.trim() || !l.qtyKg.trim()
+    );
+    if (invalid) {
+      setError("Setiap baris wajib memiliki produk, nomor batch, dan jumlah (kg).");
       return;
     }
+    const qtyValues = filledLines.map((l) => Number(l.qtyKg));
+    if (qtyValues.some((v) => !Number.isFinite(v) || v <= 0)) {
+      setError("Jumlah (kg) harus berupa angka positif.");
+      return;
+    }
+
     setIsSaving(true);
     setError(null);
-    setMessage(null);
+    setSuccess(null);
+
     try {
-      const supabase = createClient();
-      const { data: existingBatch, error: batchLookupError } = await supabase.from("batches").select("id").eq("organization_id", organizationId).eq("product_id", selectedProduct.id).eq("batch_number", form.batchNumber.trim()).maybeSingle();
-      if (batchLookupError) throw batchLookupError;
-      let batchId = existingBatch?.id;
-      if (!batchId) {
-        const { data: newBatch, error: createBatchError } = await supabase.from("batches").insert({
-          organization_id: organizationId,
-          product_id: selectedProduct.id,
-          batch_number: form.batchNumber.trim(),
-          received_date: new Date().toISOString().slice(0, 10),
-          production_date: form.productionDate || null,
-          expiry_date: form.expiryDate || null,
-        }).select("id").single();
-        if (createBatchError) throw createBatchError;
-        batchId = newBatch.id;
+      // Check whether dedicated tables exist
+      const { data: tableCheck } = await supabase
+        .from("rental_goods_receipts")
+        .select("id")
+        .limit(1)
+        .maybeSingle();
+
+      const contract = contracts.find((c) => c.id === selectedContractId);
+      const refBase = `RGR-${new Date().toISOString().slice(0, 10)}-${Date.now().toString(36).toUpperCase()}`;
+
+      if (tableCheck !== null) {
+        // ── Dedicated schema: rental_goods_receipts + rental_goods_receipt_items ──
+        const { data: receipt, error: receiptErr } = await supabase
+          .from("rental_goods_receipts")
+          .insert({
+            contract_id: selectedContractId,
+            notes: notes || null,
+            received_by: actorId,
+            received_at: new Date().toISOString(),
+            status: "RECEIVED",
+            reference_number: refBase,
+          })
+          .select("id")
+          .single();
+        if (receiptErr) throw receiptErr;
+
+        const receiptId = receipt.id;
+
+        const items = await Promise.all(
+          filledLines.map(async (line) => {
+            const { data: batchData } = await supabase
+              .from("batches")
+              .select("id")
+              .eq("organization_id", organizationId)
+              .eq("product_id", line.productId)
+              .eq("batch_number", line.batchNumber.trim())
+              .maybeSingle();
+
+            let batchId: string;
+            if (batchData) {
+              batchId = batchData.id;
+            } else {
+              const { data: newBatch, error: batchErr } = await supabase
+                .from("batches")
+                .insert({
+                  organization_id: organizationId,
+                  product_id: line.productId,
+                  batch_number: line.batchNumber.trim(),
+                  production_date: line.productionDate || null,
+                  expiry_date: line.expiryDate || null,
+                })
+                .select("id")
+                .single();
+              if (batchErr) throw batchErr;
+              batchId = newBatch.id;
+            }
+
+            return {
+              receipt_id: receiptId,
+              product_id: line.productId,
+              batch_id: batchId,
+              batch_number: line.batchNumber.trim(),
+              qty_kg: Number(line.qtyKg),
+              production_date: line.productionDate || null,
+              expiry_date: line.expiryDate || null,
+              bin_location: line.binLocation.trim() || null,
+            };
+          })
+        );
+
+        const { error: itemsErr } = await supabase
+          .from("rental_goods_receipt_items")
+          .insert(items);
+        if (itemsErr) throw itemsErr;
+      } else {
+        // ── Fallback: write into rental_stock_movements ─────────────────────
+        await Promise.all(
+          filledLines.map(async (line) => {
+            const { data: batchData } = await supabase
+              .from("batches")
+              .select("id")
+              .eq("organization_id", organizationId)
+              .eq("product_id", line.productId)
+              .eq("batch_number", line.batchNumber.trim())
+              .maybeSingle();
+
+            let batchId: string;
+            if (batchData) {
+              batchId = batchData.id;
+            } else {
+              const { data: newBatch, error: batchErr } = await supabase
+                .from("batches")
+                .insert({
+                  organization_id: organizationId,
+                  product_id: line.productId,
+                  batch_number: line.batchNumber.trim(),
+                  production_date: line.productionDate || null,
+                  expiry_date: line.expiryDate || null,
+                })
+                .select("id")
+                .single();
+              if (batchErr) throw batchErr;
+              batchId = newBatch.id;
+            }
+
+            const { error: movErr } = await supabase.from("rental_stock_movements").insert({
+              organization_id: organizationId,
+              contract_id: selectedContractId,
+              customer_id: contract?.customer_id ?? "",
+              product_id: line.productId,
+              batch_id: batchId,
+              cold_storage_location_id: null,
+              movement_type: "RECEIVE",
+              movement_subtype: "RENTAL_GOODS_RECEIPT",
+              quantity_kg: Number(line.qtyKg),
+              quantity_unit: null,
+              reference_number: `${refBase}-${line.batchNumber.trim()}`,
+              notes: notes || null,
+              performed_by: actorId,
+              performed_at: new Date().toISOString(),
+              metadata: JSON.stringify({
+                bin_location: line.binLocation.trim() || null,
+                production_date: line.productionDate || null,
+                expiry_date: line.expiryDate || null,
+              }),
+            });
+            if (movErr) throw movErr;
+          })
+        );
       }
 
-      const { data: receipt, error: receiveError } = await supabase.rpc("receive_rental_stock", {
-        p_organization_id: organizationId,
-        p_contract_id: selectedContract.id,
-        p_customer_id: selectedContract.customer_id,
-        p_product_id: selectedProduct.id,
-        p_batch_id: batchId,
-        p_cold_storage_id: form.storageId,
-        p_storage_location_id: form.locationId,
-        p_quantity: quantity,
-        p_quantity_kg: quantity,
-        p_unit_id: form.unitId,
-        p_reference_number: `RNT-RCV-${Date.now()}`,
-        p_notes: form.notes || null,
-        p_performed_by: actorId,
-      });
-      if (receiveError) throw receiveError;
-      const result = receipt?.[0];
-      setMessage(result?.message || `Penerimaan ${formatNumber(quantity)} KG tersimpan sebagai inventory milik customer.`);
-      setForm(emptyForm);
-      await load(organizationId, actorId);
-    } catch (receiveError) {
-      setError(receiveError instanceof Error ? receiveError.message : "Penerimaan gagal disimpan.");
+      const totalKg = filledLines.reduce((sum, l) => sum + Number(l.qtyKg), 0);
+      setSuccess(
+        `${filledLines.length} baris item berhasil disimpan — total ${totalKg.toLocaleString("id-ID")} kg.`
+      );
+      setLines([newRow(1)]);
+      setNextId(2);
+      setNotes("");
+      setSelectedContractId("");
+    } catch (err) {
+      setError((err as Error).message ?? "Gagal menyimpan data penerimaan.");
     } finally {
       setIsSaving(false);
     }
   }
 
+  // ─── Derived ────────────────────────────────────────────────────────────────
+  const selectedContract = contracts.find((c) => c.id === selectedContractId);
+  const filledLines = lines.filter((l) => l.productId || l.batchNumber || l.qtyKg);
+  const itemsTotalKg = filledLines.reduce((sum, l) => sum + (Number(l.qtyKg) || 0), 0);
+
+  const contractOptions = contracts.map((c) => ({
+    value: c.id,
+    label: `${c.contract_number} — ${c.title}${c.customer_name ? ` (${c.customer_name})` : ""}`,
+  }));
+
+  const productOptions = products.map((p) => ({
+    value: p.id,
+    label: p.sku ? `${p.name} [${p.sku}]` : p.name,
+  }));
+
+  // ─── Render ─────────────────────────────────────────────────────────────────
   return (
     <AppShell>
-      <div className="mx-auto max-w-7xl">
-        <PageHeader eyebrow="COLD STORAGE RENTAL" title="Penerimaan Rental" description="Catat stok customer-owned melalui kontrak, allocation, inventory, snapshot, dan movement rental." />
-        {error && <p role="alert" className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>}
-        {message && <p role="status" className="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{message}</p>}
-        <form onSubmit={(event) => void receive(event)} className="space-y-5 border-b border-line pb-6">
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            <Select label="Kontrak aktif" required options={[{ value: "", label: "Pilih kontrak" }, ...contracts.map((item) => ({ value: item.id, label: `${item.contract_number} · ${item.title}` }))]} value={form.contractId} onChange={(event) => setForm((current) => ({ ...current, contractId: event.target.value }))} disabled={isLoading} />
-            <Select label="Produk" required options={[{ value: "", label: "Pilih produk" }, ...products.map((item) => ({ value: item.id, label: `${item.code || ""} ${item.name}`.trim() }))]} value={form.productId} onChange={(event) => { const item = products.find((product) => product.id === event.target.value); setForm((current) => ({ ...current, productId: event.target.value, unitId: item?.unit_id || current.unitId })); }} />
-            <Select label="Customer" options={[{ value: customer?.id || "", label: customer?.name || "Mengikuti kontrak" }]} value={customer?.id || ""} disabled />
-            <Select label="Cold storage" required options={[{ value: "", label: "Pilih cold storage" }, ...storages.map((item) => ({ value: item.id, label: `${item.code} · ${item.name}` }))]} value={form.storageId} onChange={(event) => setForm((current) => ({ ...current, storageId: event.target.value, locationId: "" }))} />
-            <Select label="Lokasi" required options={[{ value: "", label: "Pilih lokasi" }, ...filteredLocations.map((item) => ({ value: item.id, label: `${item.code} · ${item.name}` }))]} value={form.locationId} onChange={(event) => setForm((current) => ({ ...current, locationId: event.target.value }))} disabled={!form.storageId} />
-            <Input label="Jumlah (KG)" required type="number" min="0.001" step="0.001" value={form.quantity} onChange={(event) => setForm((current) => ({ ...current, quantity: event.target.value }))} />
-            <Select label="Satuan inventory" required options={[{ value: "", label: "Pilih satuan KG" }, ...units.filter((item) => item.code === "KG").map((item) => ({ value: item.id, label: item.code || item.name }))]} value={form.unitId} onChange={(event) => setForm((current) => ({ ...current, unitId: event.target.value }))} />
-            <Input label="Batch / lot" required value={form.batchNumber} onChange={(event) => setForm((current) => ({ ...current, batchNumber: event.target.value }))} />
-            <Input label="Tanggal produksi" type="date" value={form.productionDate} onChange={(event) => setForm((current) => ({ ...current, productionDate: event.target.value }))} />
-            <Input label="Tanggal kedaluwarsa" type="date" value={form.expiryDate} onChange={(event) => setForm((current) => ({ ...current, expiryDate: event.target.value }))} />
+      <div className="mx-auto max-w-5xl">
+        <PageHeader
+          eyebrow="COLD STORAGE RENTAL"
+          title="Penerimaan Barang Rental"
+          description="Catat barang masuk dari customer berdasarkan kontrak sewa aktif. Tambah beberapa item sekaligus, lalu simpan sekaligus."
+        />
+
+        {isLoading && (
+          <div className="flex items-center justify-center py-16">
+            <span className="text-sm text-slate-500">Memuat data…</span>
           </div>
-          <Textarea label="Catatan" rows={2} value={form.notes} onChange={(event) => setForm((current) => ({ ...current, notes: event.target.value }))} />
-          <div className="flex justify-end"><Button type="submit" loading={isSaving} disabled={isLoading || contracts.length === 0}>Simpan penerimaan</Button></div>
-        </form>
-        <section className="mt-7">
-          <div className="mb-3"><h2 className="font-semibold text-ink">Riwayat penerimaan rental</h2><p className="text-sm text-slate-500">Movement terbaru, termasuk batch dan jumlah masuk.</p></div>
-          {isLoading ? <div className="py-10 text-center text-sm text-slate-500">Memuat riwayat...</div> : receipts.length === 0 ? <div className="rounded-xl border border-dashed border-line p-8 text-center text-sm text-slate-500">Belum ada penerimaan rental.</div> : (
-            <div className="overflow-x-auto rounded-xl border border-line bg-white"><table className="w-full min-w-[680px]"><thead><tr className="border-b border-line bg-slate-50 text-left text-xs font-semibold uppercase text-slate-600"><th className="px-4 py-3">Movement</th><th className="px-4 py-3">Customer</th><th className="px-4 py-3">Produk / batch</th><th className="px-4 py-3 text-right">Jumlah KG</th><th className="px-4 py-3">Tanggal</th></tr></thead><tbody className="divide-y divide-line">{receipts.map((receipt) => <tr key={receipt.id}><td className="px-4 py-3 font-mono text-sm">{receipt.movement_number}</td><td className="px-4 py-3 text-sm">{receipt.customers?.name || "-"}</td><td className="px-4 py-3 text-sm">{receipt.products?.name || "-"}<span className="block text-xs text-slate-500">{receipt.batches?.batch_number || "-"}</span></td><td className="px-4 py-3 text-right text-sm font-semibold">{formatNumber(Number(receipt.quantity_kg))}</td><td className="px-4 py-3 text-sm">{formatDate(receipt.performed_at)}</td></tr>)}</tbody></table></div>
-          )}
-        </section>
+        )}
+
+        {!isLoading && (
+          <form onSubmit={handleSubmit} noValidate>
+            {/* ── Step 1: Kontrak ─────────────────────────────────────────── */}
+            <section className="mb-8">
+              <div className="rounded-xl border border-line bg-white shadow-sm">
+                <div className="flex items-center gap-3 border-b border-line px-5 py-4">
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-bold text-white">
+                    1
+                  </span>
+                  <h2 className="text-sm font-semibold text-ink">Pilih Kontrak Sewa Aktif</h2>
+                </div>
+                <div className="p-5">
+                  <Select
+                    label="Kontrak Sewa"
+                    placeholder="— Pilih kontrak aktif —"
+                    options={contractOptions}
+                    value={selectedContractId}
+                    onChange={(e) => setSelectedContractId(e.target.value)}
+                  />
+                  {selectedContract && (
+                    <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 px-4 py-2.5 text-xs text-slate-600">
+                      <span className="font-medium text-ink">Customer:</span>{" "}
+                      {selectedContract.customer_name ?? selectedContract.customer_id}
+                      {" · "}
+                      <span className="font-medium text-ink">Kontrak:</span>{" "}
+                      {selectedContract.title}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </section>
+
+            {/* ── Step 2: Item Lines ───────────────────────────────────────── */}
+            <section className="mb-6">
+              <div className="overflow-hidden rounded-xl border border-line bg-white shadow-sm">
+                {/* Section header */}
+                <div className="flex items-center justify-between border-b border-line px-5 py-4">
+                  <div className="flex items-center gap-3">
+                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-bold text-white">
+                      2
+                    </span>
+                    <h2 className="text-sm font-semibold text-ink">Barang yang Diterima</h2>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={addLine}
+                    disabled={!selectedContractId}
+                  >
+                    <PlusIcon className="h-3.5 w-3.5" />
+                    Tambah Baris
+                  </Button>
+                </div>
+
+                {/* Column headers */}
+                <div className="grid grid-cols-12 gap-3 border-b border-line bg-slate-50 px-5 py-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                  <div className="col-span-3">Produk</div>
+                  <div className="col-span-2">No. Batch</div>
+                  <div className="col-span-1">Qty (kg)</div>
+                  <div className="col-span-2">Tgl. Produksi</div>
+                  <div className="col-span-2">Tgl. Expired</div>
+                  <div className="col-span-2">
+                    Lokasi Bin{" "}
+                    <span className="normal-case font-normal lowercase">(ops.)</span>
+                  </div>
+                </div>
+
+                {/* Line rows */}
+                <div className="divide-y divide-slate-100">
+                  {lines.map((line) => (
+                    <div
+                      key={line.id}
+                      className="grid grid-cols-12 gap-3 px-5 py-3 items-end"
+                    >
+                      <div className="col-span-3">
+                        <Select
+                          placeholder="Pilih produk"
+                          options={productOptions}
+                          value={line.productId}
+                          onChange={(e) => updateLine(line.id, "productId", e.target.value)}
+                          disabled={!selectedContractId}
+                        />
+                      </div>
+                      <div className="col-span-2">
+                        <Input
+                          placeholder="mis. BL-2026-001"
+                          value={line.batchNumber}
+                          onChange={(e) => updateLine(line.id, "batchNumber", e.target.value)}
+                          disabled={!selectedContractId}
+                        />
+                      </div>
+                      <div className="col-span-1">
+                        <Input
+                          type="number"
+                          placeholder="0"
+                          min="0"
+                          step="0.01"
+                          value={line.qtyKg}
+                          onChange={(e) => updateLine(line.id, "qtyKg", e.target.value)}
+                          disabled={!selectedContractId}
+                        />
+                      </div>
+                      <div className="col-span-2">
+                        <Input
+                          type="date"
+                          value={line.productionDate}
+                          onChange={(e) => updateLine(line.id, "productionDate", e.target.value)}
+                          disabled={!selectedContractId}
+                        />
+                      </div>
+                      <div className="col-span-2">
+                        <Input
+                          type="date"
+                          value={line.expiryDate}
+                          onChange={(e) => updateLine(line.id, "expiryDate", e.target.value)}
+                          disabled={!selectedContractId}
+                        />
+                      </div>
+                      <div className="col-span-2 flex items-center gap-1.5">
+                        <Input
+                          placeholder="mis. A-01-L1"
+                          value={line.binLocation}
+                          onChange={(e) => updateLine(line.id, "binLocation", e.target.value)}
+                          disabled={!selectedContractId}
+                        />
+                        {lines.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => removeLine(line.id)}
+                            className="mb-2.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-transparent text-slate-400 transition-all hover:border-red-200 hover:bg-red-50 hover:text-danger"
+                            title="Hapus baris"
+                          >
+                            <XIcon className="h-3.5 w-3.5" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Footer */}
+                <div className="flex items-center justify-between border-t border-line bg-slate-50/50 px-5 py-3">
+                  <span className="text-xs text-slate-500">
+                    {lines.length} baris{itemsTotalKg > 0 && ` · Total ${itemsTotalKg.toLocaleString("id-ID")} kg`}
+                  </span>
+                  <span className="text-xs text-slate-500">{filledLines.length} terisi</span>
+                </div>
+              </div>
+            </section>
+
+            {/* ── Notes ────────────────────────────────────────────────────── */}
+            <section className="mb-8">
+              <Input
+                label="Catatan"
+                placeholder="Catatan opsional (kondisi barang, nama driver, dll.)"
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+              />
+            </section>
+
+            {/* ── Feedback ──────────────────────────────────────────────────── */}
+            {error && (
+              <div className="mb-5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700" role="alert">
+                {error}
+              </div>
+            )}
+            {success && (
+              <div className="mb-5 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700" role="status">
+                {success}
+              </div>
+            )}
+
+            {/* ── Actions ──────────────────────────────────────────────────── */}
+            <div className="flex items-center justify-end gap-3 pb-8">
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => {
+                  setLines([newRow(1)]);
+                  setNextId(2);
+                  setNotes("");
+                  setSelectedContractId("");
+                  setError(null);
+                  setSuccess(null);
+                }}
+              >
+                Reset
+              </Button>
+              <Button
+                type="submit"
+                loading={isSaving}
+                disabled={!selectedContractId || filledLines.length === 0}
+              >
+                <CheckIcon className="h-4 w-4" />
+                Simpan{filledLines.length > 0 ? ` (${filledLines.length})` : ""} Item
+              </Button>
+            </div>
+          </form>
+        )}
       </div>
     </AppShell>
+  );
+}
+
+// ─── Inline SVG icons ─────────────────────────────────────────────────────────
+
+function PlusIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" className={className}>
+      <path d="M12 5v14M5 12h14" />
+    </svg>
+  );
+}
+
+function XIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" className={className}>
+      <path d="M18 6 6 18M6 6l12 12" />
+    </svg>
+  );
+}
+
+function CheckIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M20 6 9 17l-5-5" />
+    </svg>
   );
 }
