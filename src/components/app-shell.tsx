@@ -318,6 +318,7 @@ export const NAV_GROUPS = [
       { label: "Penerimaan", href: "/supply-chain/receiving", icon: PackageIcon, permission: "inventory.receive" },
       { label: "Quality Control", href: "/supply-chain/qc", icon: ShieldIcon, permission: "inventory.adjust" },
       { label: "Persediaan", href: "/warehouse/inventory", icon: WarehouseIcon, permission: "inventory.view" },
+      { label: "Cold Storage", href: "/warehouse/cold-storages", icon: WarehouseIcon, permission: "inventory.manage" },
       { label: "Penjualan", href: "/supply-chain/sales", icon: ReceiptIcon, permission: "sales.view" },
       { label: "Pengambilan", href: "/supply-chain/picking", icon: GridIcon, permission: "inventory.view" },
       { label: "Pengiriman", href: "/supply-chain/delivery", icon: TruckIcon, permission: "inventory.issue" },
