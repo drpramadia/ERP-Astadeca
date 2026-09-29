@@ -349,8 +349,8 @@ export function MasterDataClient({ resource }: { resource: string }) {
       }
       try {
         const supabase = createClient();
-        const { data: claimsData } = await supabase.auth.getClaims();
-        const userId = claimsData?.claims?.sub;
+        const { data: claimsData } = await supabase.auth.getSession();
+        const userId = sessionData?.session?.user?.id;
         if (!userId) throw new Error("Silakan login untuk mengelola master data.");
         const { data: membership, error: membershipError } = await supabase
           .from("organization_memberships")

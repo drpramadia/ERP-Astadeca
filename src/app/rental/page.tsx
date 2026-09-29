@@ -17,8 +17,8 @@ const rentalWorkflows = [
 
 export default async function RentalPage() {
   const supabase = await createClient();
-  const { data: claimsData } = await supabase.auth.getClaims();
-  if (!claimsData?.claims) redirect("/login");
+  const { data: claimsData } = await supabase.auth.getSession();
+  if (!sessionData?.session?.user) redirect("/login");
 
   return (
     <AppShell>

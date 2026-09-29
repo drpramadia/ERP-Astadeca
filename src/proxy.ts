@@ -44,7 +44,7 @@ export async function proxy(request: NextRequest) {
    * karena data bisa bernilai null ketika
    * user belum memiliki session.
    */
-  const { data } = await supabase.auth.getClaims();
+  const { data } = await supabase.auth.getSession();
 
   const claims = data?.claims ?? null;
 

@@ -143,8 +143,8 @@ export default function RentalReceivingPage() {
     let cancelled = false;
     async function init() {
       try {
-        const { data: claimsData } = await supabase.auth.getClaims();
-        const userId = (claimsData?.claims as { sub?: string })?.sub;
+        const { data: claimsData } = await supabase.auth.getSession();
+        const userId = (sessionData?.session?.user as { sub?: string })?.sub;
         if (!userId) throw new Error("Silakan login untuk mengakses halaman ini.");
         const { data: membership, error: membershipErr } = await supabase
           .from("organization_memberships")

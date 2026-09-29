@@ -115,8 +115,8 @@ export default function SalesPage() {
   useEffect(() => {
     async function init() {
       const supabase = createClient();
-      const { data: claimsData } = await supabase.auth.getClaims();
-      const claims = claimsData?.claims;
+      const { data: claimsData } = await supabase.auth.getSession();
+      const claims = sessionData?.session?.user;
       if (!claims) return;
 
       const { data: membership } = await supabase
@@ -165,8 +165,8 @@ export default function SalesPage() {
     setIsSavingQuotation(true);
     try {
       const supabase = createClient();
-      const { data: claimsData } = await supabase.auth.getClaims();
-      const claims = claimsData?.claims;
+      const { data: claimsData } = await supabase.auth.getSession();
+      const claims = sessionData?.session?.user;
       if (!claims) throw new Error("Not authenticated");
 
       const validItems = quotationItems.filter(i => i.product_id && i.quantity && i.unit_id && i.unit_price);
@@ -235,8 +235,8 @@ export default function SalesPage() {
     setIsSavingSO(true);
     try {
       const supabase = createClient();
-      const { data: claimsData } = await supabase.auth.getClaims();
-      const claims = claimsData?.claims;
+      const { data: claimsData } = await supabase.auth.getSession();
+      const claims = sessionData?.session?.user;
       if (!claims) throw new Error("Not authenticated");
 
       const validItems = soItems.filter(i => i.product_id && i.quantity && i.unit_id && i.unit_price);

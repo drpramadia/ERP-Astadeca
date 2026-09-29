@@ -175,9 +175,9 @@ export default function ReceivingPage() {
   useEffect(() => {
     async function init() {
       const supabase = createClient();
-      const { data: claimsData } = await supabase.auth.getClaims();
-      const userId = claimsData?.claims?.sub;
-      if (!userId) return;
+      const { data: sessionData } = await supabase.auth.getSession();
+      const userId = sessionData?.session?.user?.id;
+      if (!userId) { setIsLoading(false); return; }
 
       const { data: membership } = await supabase
         .from("organization_memberships")
@@ -185,7 +185,7 @@ export default function ReceivingPage() {
         .eq("user_id", userId)
         .eq("is_active", true)
         .maybeSingle();
-      if (!membership) return;
+      if (!membership) { setIsLoading(false); return; }
 
       await Promise.all([loadRecords(membership.organization_id), loadLookups(membership.organization_id)]);
       setIsLoading(false);
@@ -249,9 +249,8 @@ export default function ReceivingPage() {
     setSaving(true);
     try {
       const supabase = createClient();
-      const { data: claimsData } = await supabase.auth.getClaims();
-      const userId = claimsData?.claims?.sub;
-      if (!userId) throw new Error("Tidak dapat mengidentifikasi user.");
+      const { data: sessionData } = await supabase.auth.getSession();
+      const userId = sessionData?.session?.user?.id;
 
       const rpcItems = items
         .filter((item) => item.quantity_received > 0)
@@ -273,7 +272,7 @@ export default function ReceivingPage() {
         p_po_id: selectedPoId,
         p_received_date: receivedDate,
         p_items: rpcItems,
-        p_created_by: userId,
+        p_created_by: userId,  // null-safe: RPC defaults to auth.uid()
       });
 
       if (error) throw error;

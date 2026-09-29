@@ -27,8 +27,8 @@ export default function LoginPage() {
     }
 
     // Resolve user role to determine redirect
-    const { data: claimsData } = await supabase.auth.getClaims();
-    const userId = claimsData?.claims?.sub;
+    const { data: claimsData } = await supabase.auth.getSession();
+    const userId = sessionData?.session?.user?.id;
     if (!userId) { router.push("/login"); return; }
 
     const { data: membership } = await supabase

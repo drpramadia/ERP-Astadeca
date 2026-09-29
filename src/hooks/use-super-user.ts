@@ -2,8 +2,8 @@ import { createClient } from "@/lib/supabase/server";
 
 export async function isSuperUser(): Promise<boolean> {
   const supabase = await createClient();
-  const { data: claimsData } = await supabase.auth.getClaims();
-  const claims = claimsData?.claims;
+  const { data: claimsData } = await supabase.auth.getSession();
+  const claims = sessionData?.session?.user;
   if (!claims) return false;
 
   const { data: profile } = await supabase
@@ -17,8 +17,8 @@ export async function isSuperUser(): Promise<boolean> {
 
 export async function getCurrentProfile() {
   const supabase = await createClient();
-  const { data: claimsData } = await supabase.auth.getClaims();
-  const claims = claimsData?.claims;
+  const { data: claimsData } = await supabase.auth.getSession();
+  const claims = sessionData?.session?.user;
   if (!claims) return null;
 
   const { data: profile } = await supabase

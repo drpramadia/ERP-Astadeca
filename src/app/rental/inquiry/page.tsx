@@ -70,7 +70,7 @@ export default function InquiryPage() {
 
   const load = useCallback(async () => {
     const supabase = createClient();
-    const { data: claims } = await supabase.auth.getClaims();
+    const { data: claims } = await supabase.auth.getSession();
     const userId = claims?.claims?.sub;
     if (!userId) return;
 

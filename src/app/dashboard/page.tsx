@@ -157,8 +157,8 @@ function MovementRow({ movement }: { movement: RecentMovement }) {
 
 export default async function DashboardPage() {
   const supabase = await createClient();
-  const { data: claimsData } = await supabase.auth.getClaims();
-  const claims = claimsData?.claims ?? null;
+  const { data: claimsData } = await supabase.auth.getSession();
+  const claims = sessionData?.session?.user ?? null;
   if (!claims) { redirect("/login"); }
   const userId = claims.sub;
   const { data: profile } = await supabase.from("profiles").select("full_name").eq("id", userId).maybeSingle();

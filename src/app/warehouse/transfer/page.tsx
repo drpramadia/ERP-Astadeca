@@ -77,8 +77,8 @@ export default function TransferPage() {
     async function initialize() {
       try {
         const supabase = createClient();
-        const { data: claimsData } = await supabase.auth.getClaims();
-        const userId = claimsData?.claims?.sub;
+        const { data: claimsData } = await supabase.auth.getSession();
+        const userId = sessionData?.session?.user?.id;
         if (!userId) throw new Error("Silakan login untuk melakukan transfer.");
         const { data: membership, error: membershipError } = await supabase.from("organization_memberships").select("organization_id").eq("user_id", userId).eq("is_active", true).maybeSingle();
         if (membershipError) throw membershipError;

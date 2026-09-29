@@ -117,8 +117,8 @@ export default function QcPage() {
     async function load() {
       try {
         const supabase = createClient();
-        const { data: claimsData } = await supabase.auth.getClaims();
-        const currentUserId = claimsData?.claims?.sub;
+        const { data: claimsData } = await supabase.auth.getSession();
+        const currentUserId = sessionData?.session?.user?.id;
         if (!currentUserId) throw new Error("Silakan login untuk membuka kendali mutu.");
 
         const { data: membership, error: membershipError } = await supabase

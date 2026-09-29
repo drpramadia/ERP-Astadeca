@@ -57,8 +57,8 @@ export default function PickingPage() {
     async function load() {
       try {
         const supabase = createClient();
-        const { data: claimsData } = await supabase.auth.getClaims();
-        const userId = claimsData?.claims?.sub;
+        const { data: claimsData } = await supabase.auth.getSession();
+        const userId = sessionData?.session?.user?.id;
         if (!userId) throw new Error("Silakan login untuk membuka picking.");
         const { data: membership, error: membershipError } = await supabase
           .from("organization_memberships")

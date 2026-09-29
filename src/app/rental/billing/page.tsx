@@ -69,8 +69,8 @@ export default function BillingPage() {
     if (!loaded || !userId) return;
     async function init() {
       const supabase = createClient();
-      const { data: claimsData } = await supabase.auth.getClaims();
-      const claims = claimsData?.claims;
+      const { data: claimsData } = await supabase.auth.getSession();
+      const claims = sessionData?.session?.user;
       if (!claims) return;
       const { data: membership } = await supabase
         .from("organization_memberships")
@@ -128,8 +128,8 @@ export default function BillingPage() {
     setError(null);
     try {
       const supabase = createClient();
-      const { data: claimsData } = await supabase.auth.getClaims();
-      const claims = claimsData?.claims;
+      const { data: claimsData } = await supabase.auth.getSession();
+      const claims = sessionData?.session?.user;
       if (!claims) throw new Error("Not authenticated");
 
       // Get org_id

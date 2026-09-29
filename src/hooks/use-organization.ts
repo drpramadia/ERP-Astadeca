@@ -23,8 +23,8 @@ export function useOrganization() {
     async function fetchData() {
       try {
         const supabase = createClient();
-        const { data: claimsData } = await supabase.auth.getClaims();
-        const claims = claimsData?.claims;
+        const { data: claimsData } = await supabase.auth.getSession();
+        const claims = sessionData?.session?.user;
         
         if (!claims) {
           setResult({ organization: null, membership: null, isLoading: false, error: null });

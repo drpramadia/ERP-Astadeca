@@ -102,13 +102,13 @@ export default function ColdStoragesPage() {
   useEffect(() => {
     async function init() {
       const supabase = createClient();
-      const { data: claimsData } = await supabase.auth.getClaims();
-      const orgId = (claimsData?.claims as { org_id?: string })?.org_id;
+      const { data: claimsData } = await supabase.auth.getSession();
+      const orgId = (sessionData?.session?.user as { org_id?: string })?.org_id;
       if (!orgId) {
         const { data: m } = await supabase
           .from("organization_memberships")
           .select("organization_id")
-          .eq("user_id", (claimsData?.claims as { sub?: string })?.sub)
+          .eq("user_id", (sessionData?.session?.user as { sub?: string })?.sub)
           .eq("is_active", true)
           .maybeSingle();
         setOrganizationId(m?.organization_id ?? null);

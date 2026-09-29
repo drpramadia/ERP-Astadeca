@@ -40,8 +40,8 @@ export default function DocumentCenterPage() {
   useEffect(() => {
     async function init() {
       const supabase = createClient();
-      const { data: claimsData } = await supabase.auth.getClaims();
-      const claims = claimsData?.claims;
+      const { data: claimsData } = await supabase.auth.getSession();
+      const claims = sessionData?.session?.user;
       if (!claims) return;
 
       const { data: membership } = await supabase
