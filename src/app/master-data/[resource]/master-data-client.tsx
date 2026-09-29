@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "react";
 import Link from "next/link";
 import { AppShell } from "@/components/app-shell";
 import { PageHeader } from "@/components/page-header";
@@ -10,6 +10,7 @@ import { Modal } from "@/components/ui/modal";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { createClient } from "@/lib/supabase/client";
+import { downloadCsv, parseCsv, toCsv } from "@/lib/csv";
 
 type FieldType = "text" | "email" | "number" | "textarea" | "select" | "checkbox";
 
@@ -198,6 +199,123 @@ function displayValue(value: unknown) {
   return String(value);
 }
 
+// ============================================
+// CSV: template, export, import
+// ============================================
+
+/**
+ * Template headers are the field names, because import matches on them. Row 1 is
+ * the machine-readable header, row 2 restates each column in Indonesian so the
+ * sheet is usable in Excel.
+ */
+function buildTemplate(definition: ResourceDefinition, options: Record<string, ReferenceOption[]>, template: boolean): string {
+  const headers = definition.fields.map((field) => field.name);
+  const labels = definition.fields.map((field) => field.label);
+  return toCsv(headers, template ? [labels, templateHintRow(definition, options)] : [labels]);
+}
+
+/**
+ * The template's explanatory row. Import compares the first data row against
+ * this exact row and drops it when it matches, so a filled-in template uploads
+ * without the user having to delete the explanation — while an exported sheet
+ * never matches and keeps every record.
+ */
+function templateHintRow(definition: ResourceDefinition, options: Record<string, ReferenceOption[]>): string[] {
+  return definition.fields.map((field) => {
+    if (field.type === "checkbox") return "true / false";
+    if (field.type === "number") return "angka";
+    if (field.type === "select" && field.optionSource) {
+      const codes = (options[field.optionSource] || []).map((option) => option.code);
+      return codes.length ? `kode: ${codes.join(" | ")}` : `kode ${field.optionSource}`;
+    }
+    if (field.type === "email") return "email";
+    return field.required ? "wajib diisi" : "opsional";
+  });
+}
+
+/** Whether a row counts as active, per the resource's status strategy. */
+function isRowActive(definition: ResourceDefinition, row: MasterRow): boolean {
+  const status = row[definition.statusField];
+  return definition.statusField === "active" ? status === true : status === (definition.statusActiveValue || "ACTIVE");
+}
+
+/** A row's values as CSV cells: booleans as true/false, references as codes. */
+function rowToCells(
+  definition: ResourceDefinition,
+  row: MasterRow,
+  options: Record<string, ReferenceOption[]>,
+): string[] {
+  return definition.fields.map((field) => {
+    const value = row[field.name];
+    if (field.type === "select" && field.optionSource) {
+      const pool = options[field.optionSource] || [];
+      const match = pool.find((option) => option.id === value);
+      return match ? match.code : value === null || value === undefined ? "" : String(value);
+    }
+    if (field.type === "checkbox") return value === true ? "true" : value === false ? "false" : "";
+    return value === null || value === undefined ? "" : String(value);
+  });
+}
+
+/**
+ * Resolves one imported cell. Reference columns accept the referenced record's
+ * code (what the template lists), its name, or a raw UUID, so a sheet exported
+ * from this page can be re-imported unchanged.
+ */
+function resolveCell(
+  definition: ResourceDefinition,
+  field: FieldDefinition,
+  raw: string,
+  options: Record<string, ReferenceOption[]>,
+): { value: unknown; error?: string } {
+  const text = raw.trim();
+
+  if (field.type === "checkbox") {
+    if (text === "") return { value: field.defaultValue ?? false };
+    const lowered = text.toLowerCase();
+    if (["true", "ya", "1", "y"].includes(lowered)) return { value: true };
+    if (["false", "tidak", "0", "n"].includes(lowered)) return { value: false };
+    return { value: null, error: `${field.label}: nilai "${text}" bukan true/false.` };
+  }
+
+  if (field.type === "select" && field.optionSource) {
+    if (text === "") {
+      if (field.required) return { value: null, error: `${field.label} wajib diisi.` };
+      return { value: null };
+    }
+    const pool = options[field.optionSource] || [];
+    const match = pool.find((option) => option.code.toLowerCase() === text.toLowerCase())
+      || pool.find((option) => option.name.toLowerCase() === text.toLowerCase())
+      || pool.find((option) => option.id === text);
+    if (!match) {
+      return { value: null, error: `${field.label}: "${text}" tidak cocok dengan ${field.optionSource}.` };
+    }
+    return { value: match.id };
+  }
+
+  if (field.type === "number") {
+    if (text === "") {
+      if (field.required) return { value: null, error: `${field.label} wajib diisi.` };
+      return { value: null };
+    }
+    const parsed = Number(text);
+    if (Number.isNaN(parsed)) return { value: null, error: `${field.label}: "${text}" bukan angka.` };
+    return { value: parsed };
+  }
+
+  if (text === "" || text === "-") {
+    if (field.required) return { value: null, error: `${field.label} wajib diisi.` };
+    return { value: null };
+  }
+  return { value: text };
+}
+
+interface ImportIssue { line: number; message: string }
+
+function importFilename(definition: ResourceDefinition): string {
+  return `template-${definition.table}.csv`;
+}
+
 export function MasterDataClient({ resource }: { resource: string }) {
   const definition = resourceDefinitions[resource];
   const [rows, setRows] = useState<MasterRow[]>([]);
@@ -211,6 +329,14 @@ export function MasterDataClient({ resource }: { resource: string }) {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [isBulkBusy, setIsBulkBusy] = useState(false);
+  const [importRows, setImportRows] = useState<Record<string, unknown>[] | null>(null);
+  const [importIssues, setImportIssues] = useState<ImportIssue[]>([]);
+  const [isImporting, setIsImporting] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState<MasterRow | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -318,13 +444,20 @@ export function MasterDataClient({ resource }: { resource: string }) {
     }
   }
 
-  async function deactivate(row: MasterRow) {
-    if (!organizationId || !window.confirm(`Nonaktifkan ${String(row[definition.primaryField] || "record ini")}?`)) return;
+  /** The value written to the status column for a desired active state. */
+  function statusValueFor(active: boolean): boolean | string {
+    if (definition.statusField === "active") return active;
+    return active ? (definition.statusActiveValue || "ACTIVE") : "INACTIVE";
+  }
+
+  /** Active <-> inactive, without deleting the record or its history. */
+  async function toggleActive(row: MasterRow) {
+    if (!organizationId) return;
+    const next = !isRowActive(definition, row);
     setError(null);
-    const statusValue = definition.statusField === "active" ? false : "INACTIVE";
     const { data, error: updateError } = await createClient()
       .from(definition.table)
-      .update({ [definition.statusField]: statusValue })
+      .update({ [definition.statusField]: statusValueFor(next) })
       .eq("id", row.id)
       .eq("organization_id", organizationId)
       .select("*")
@@ -334,6 +467,179 @@ export function MasterDataClient({ resource }: { resource: string }) {
       return;
     }
     setRows((current) => current.map((item) => item.id === row.id ? data as MasterRow : item));
+    setNotice(`${displayValue(row[definition.primaryField])} ${next ? "diaktifkan" : "dinonaktifkan"}.`);
+  }
+
+  /** Hard delete. Records still referenced by transactions are refused by the
+   *  foreign keys, so the failure is surfaced with a pointer to deactivate. */
+  async function removeRow(row: MasterRow) {
+    if (!organizationId) return;
+    setError(null);
+    setIsBulkBusy(true);
+    const { error: deleteError } = await createClient()
+      .from(definition.table)
+      .delete()
+      .eq("id", row.id)
+      .eq("organization_id", organizationId);
+    setIsBulkBusy(false);
+    setConfirmDelete(null);
+    if (deleteError) {
+      setError(`Gagal menghapus: ${deleteError.message}. Jika data ini sudah dipakai transaksi, gunakan Nonaktifkan.`);
+      return;
+    }
+    setRows((current) => current.filter((item) => item.id !== row.id));
+    setSelected((current) => {
+      const next = new Set(current);
+      next.delete(row.id);
+      return next;
+    });
+    setNotice(`${displayValue(row[definition.primaryField])} dihapus permanen.`);
+  }
+
+  async function bulkSetActive(active: boolean) {
+    if (!organizationId || selected.size === 0) return;
+    setIsBulkBusy(true);
+    setError(null);
+    const ids = Array.from(selected);
+    const { data, error: updateError } = await createClient()
+      .from(definition.table)
+      .update({ [definition.statusField]: statusValueFor(active) })
+      .in("id", ids)
+      .eq("organization_id", organizationId)
+      .select("*");
+    setIsBulkBusy(false);
+    if (updateError) {
+      setError(updateError.message);
+      return;
+    }
+    const updated = (data || []) as MasterRow[];
+    setRows((current) => current.map((item) => updated.find((entry) => entry.id === item.id) ?? item));
+    setSelected(new Set());
+    setNotice(`${updated.length} data di${active ? "aktifkan" : "nonaktifkan"}.`);
+  }
+
+  async function bulkDelete() {
+    if (!organizationId || selected.size === 0) return;
+    const ids = Array.from(selected);
+    if (!window.confirm(`Hapus permanen ${ids.length} data terpilih? Tindakan ini tidak dapat dibatalkan.`)) return;
+    setIsBulkBusy(true);
+    setError(null);
+    const { error: deleteError } = await createClient()
+      .from(definition.table)
+      .delete()
+      .in("id", ids)
+      .eq("organization_id", organizationId);
+    setIsBulkBusy(false);
+    if (deleteError) {
+      setError(`Gagal menghapus: ${deleteError.message}. Jika data sudah dipakai transaksi, gunakan Nonaktifkan.`);
+      return;
+    }
+    setRows((current) => current.filter((item) => !ids.includes(item.id)));
+    setSelected(new Set());
+    setNotice(`${ids.length} data dihapus permanen.`);
+  }
+
+  function downloadTemplate() {
+    setError(null);
+    downloadCsv(importFilename(definition), buildTemplate(definition, options, true));
+  }
+
+  function exportRows() {
+    setError(null);
+    const headers = definition.fields.map((field) => field.name);
+    const labels = definition.fields.map((field) => field.label);
+    // Row 2 is the label row, never the template's hint row, so re-importing an
+    // exported file keeps every record instead of skipping the first one.
+    downloadCsv(`master-${definition.table}.csv`, toCsv(headers, [
+      labels,
+      ...rows.map((row) => rowToCells(definition, row, options)),
+    ]));
+  }
+
+  function openImportPicker() {
+    setError(null);
+    setImportIssues([]);
+    setImportRows(null);
+    fileInputRef.current?.click();
+  }
+
+  async function handleImportFile(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    setError(null);
+    setNotice(null);
+
+    const table = parseCsv(await file.text());
+    if (table.length < 2) {
+      setError("File CSV kosong atau tidak memiliki baris data.");
+      return;
+    }
+
+    const headers = table[0].map((header) => header.trim());
+    const missing = definition.fields.filter((field) => field.required && !headers.includes(field.name));
+    if (missing.length > 0) {
+      setError(`Kolom wajib tidak ditemukan: ${missing.map((field) => `${field.name} (${field.label})`).join(", ")}. Unduh template terbaru dan isi sesuai kolomnya.`);
+      return;
+    }
+
+    // A file produced by this page leads with explanation rows, not records:
+    // the label row (template and export) and the template's hint row. Any
+    // leading row that repeats one of them is dropped, so a template can be
+    // filled in and uploaded as-is. Rows further down are never skipped, so a
+    // record whose value happens to equal a label is still imported.
+    const explanationRows = new Set([
+      definition.fields.map((field) => field.label).join("\u0001"),
+      templateHintRow(definition, options).join("\u0001"),
+    ]);
+    let dataLines = table.slice(1);
+    let firstLineNumber = 2;
+    while (dataLines.length > 0 && explanationRows.has(dataLines[0].join("\u0001"))) {
+      dataLines = dataLines.slice(1);
+      firstLineNumber += 1;
+    }
+
+    const parsed: Record<string, unknown>[] = [];
+    const issues: ImportIssue[] = [];
+    dataLines.forEach((line, index) => {
+      const record: Record<string, unknown> = {};
+      const rowErrors: string[] = [];
+      for (const field of definition.fields) {
+        const columnIndex = headers.indexOf(field.name);
+        const result = resolveCell(definition, field, columnIndex === -1 ? "" : (line[columnIndex] ?? ""), options);
+        if (result.error) rowErrors.push(result.error);
+        else record[field.name] = result.value;
+      }
+      if (rowErrors.length > 0) issues.push({ line: index + firstLineNumber, message: rowErrors.join(" ") });
+      else parsed.push(record);
+    });
+
+    setImportIssues(issues);
+    if (parsed.length === 0) {
+      setError(`Tidak ada baris yang valid.${issues[0] ? ` Baris ${issues[0].line}: ${issues[0].message}` : ""}`);
+      return;
+    }
+    setImportRows(parsed);
+  }
+
+  async function runImport() {
+    if (!organizationId || !importRows) return;
+    setIsImporting(true);
+    setError(null);
+    const { data, error: insertError } = await createClient()
+      .from(definition.table)
+      .insert(importRows.map((record) => ({ ...record, organization_id: organizationId })))
+      .select("*");
+    setIsImporting(false);
+    if (insertError) {
+      setError(`Impor gagal: ${insertError.message}`);
+      return;
+    }
+    const inserted = (data || []) as MasterRow[];
+    setRows((current) => [...inserted, ...current]);
+    setNotice(`${inserted.length} data berhasil diimpor.`);
+    setImportRows(null);
+    setImportIssues([]);
   }
 
   const filteredRows = rows.filter((row) => {
@@ -363,10 +669,28 @@ export function MasterDataClient({ resource }: { resource: string }) {
           ))}
         </nav>
         {error && <p role="alert" className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>}
+        {notice && <p role="status" className="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">{notice}</p>}
         <div className="mb-4 flex flex-wrap items-center gap-3 border-b border-line pb-4">
           <Input aria-label={`Cari ${definition.title}`} placeholder="Cari kode atau nama" value={search} onChange={(event) => setSearch(event.target.value)} className="max-w-sm" />
-          <span className="ml-auto text-sm text-slate-500">{filteredRows.length} record</span>
+          <div className="ml-auto flex flex-wrap items-center gap-2">
+            <Button size="sm" variant="secondary" onClick={downloadTemplate}>Unduh template CSV</Button>
+            <Button size="sm" variant="secondary" onClick={exportRows} disabled={rows.length === 0}>Ekspor CSV</Button>
+            <Button size="sm" variant="secondary" onClick={openImportPicker}>Impor CSV</Button>
+            <span className="text-sm text-slate-500">{filteredRows.length} record</span>
+          </div>
+          <input ref={fileInputRef} type="file" accept=".csv,text/csv" className="hidden" onChange={(event) => void handleImportFile(event)} />
         </div>
+        {selected.size > 0 && (
+          <div className="mb-4 flex flex-wrap items-center gap-2 rounded-lg border border-primary/30 bg-primary/5 px-4 py-3">
+            <span className="text-sm font-medium text-ink">{selected.size} data dipilih</span>
+            <div className="ml-auto flex flex-wrap gap-2">
+              <Button size="sm" variant="secondary" disabled={isBulkBusy} onClick={() => void bulkSetActive(true)}>Aktifkan</Button>
+              <Button size="sm" variant="secondary" disabled={isBulkBusy} onClick={() => void bulkSetActive(false)}>Nonaktifkan</Button>
+              <Button size="sm" variant="danger" disabled={isBulkBusy} onClick={() => void bulkDelete()}>Hapus</Button>
+              <Button size="sm" variant="ghost" disabled={isBulkBusy} onClick={() => setSelected(new Set())}>Batal pilih</Button>
+            </div>
+          </div>
+        )}
         {isLoading ? (
           <div className="flex h-48 items-center justify-center text-sm text-slate-500">Memuat {definition.title.toLowerCase()}...</div>
         ) : filteredRows.length === 0 ? (
@@ -375,6 +699,14 @@ export function MasterDataClient({ resource }: { resource: string }) {
           <div className="overflow-x-auto rounded-xl border border-line bg-white">
             <table className="w-full min-w-[640px]">
               <thead><tr className="border-b border-line bg-slate-50 text-left text-xs font-semibold uppercase text-slate-600">
+                <th className="w-10 px-4 py-3">
+                  <input
+                    type="checkbox"
+                    aria-label={`Pilih semua ${definition.title}`}
+                    checked={filteredRows.length > 0 && filteredRows.every((row) => selected.has(row.id))}
+                    onChange={(event) => setSelected(event.target.checked ? new Set(filteredRows.map((row) => row.id)) : new Set())}
+                  />
+                </th>
                 <th className="px-4 py-3">{definition.secondaryField || "Nama"}</th>
                 <th className="px-4 py-3">{definition.primaryField}</th>
                 <th className="px-4 py-3">Status</th>
@@ -382,18 +714,37 @@ export function MasterDataClient({ resource }: { resource: string }) {
               </tr></thead>
               <tbody className="divide-y divide-line">
                 {filteredRows.map((row) => {
-                  const status = row[definition.statusField];
-                  const active = definition.statusField === "active" ? status === true : status === (definition.statusActiveValue || "ACTIVE");
+                  const active = isRowActive(definition, row);
                   return (
                     <tr key={row.id} className="hover:bg-slate-50">
+                      <td className="px-4 py-3">
+                        <input
+                          type="checkbox"
+                          aria-label={`Pilih ${displayValue(row[definition.primaryField])}`}
+                          checked={selected.has(row.id)}
+                          onChange={(event) => setSelected((current) => {
+                            const next = new Set(current);
+                            if (event.target.checked) next.add(row.id);
+                            else next.delete(row.id);
+                            return next;
+                          })}
+                        />
+                      </td>
                       <td className="px-4 py-3 text-sm font-medium text-ink">{displayValue(definition.secondaryField ? row[definition.secondaryField] : row.id)}</td>
                       <td className="px-4 py-3 text-sm text-ink">{displayValue(row[definition.primaryField])}</td>
-                      <td className="px-4 py-3 text-sm"><span className={active ? "text-emerald-700" : "text-slate-500"}>{active ? "Aktif" : displayValue(status)}</span></td>
+                      <td className="px-4 py-3 text-sm">
+                        <span className={active ? "rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700" : "rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600"}>
+                          {active ? "Aktif" : "Nonaktif"}
+                        </span>
+                      </td>
                       <td className="px-4 py-3 text-right">
                         <div className="inline-flex gap-2">
                           <Button size="sm" variant="ghost" onClick={() => setDetails(row)}>Detail</Button>
                           <Button size="sm" variant="secondary" onClick={() => openEdit(row)}>Edit</Button>
-                          {active && <Button size="sm" variant="danger" onClick={() => void deactivate(row)}>Nonaktifkan</Button>}
+                          <Button size="sm" variant="secondary" disabled={isBulkBusy} onClick={() => void toggleActive(row)}>
+                            {active ? "Nonaktifkan" : "Aktifkan"}
+                          </Button>
+                          <Button size="sm" variant="danger" disabled={isBulkBusy} onClick={() => setConfirmDelete(row)}>Hapus</Button>
                         </div>
                       </td>
                     </tr>
@@ -431,6 +782,58 @@ export function MasterDataClient({ resource }: { resource: string }) {
 
       <Modal isOpen={details !== null} onClose={() => setDetails(null)} title={`Detail ${definition.title}`} size="lg">
         {details && <dl className="grid gap-3 sm:grid-cols-2">{Object.entries(details).filter(([key]) => !["id", "organization_id"].includes(key)).map(([key, value]) => <div key={key} className="border-b border-line pb-2"><dt className="text-xs text-slate-500">{key.replaceAll("_", " ")}</dt><dd className="mt-1 break-words text-sm text-ink">{displayValue(value)}</dd></div>)}</dl>}
+      </Modal>
+
+      <Modal isOpen={importRows !== null} onClose={() => { setImportRows(null); setImportIssues([]); }} title={`Pratinjau impor ${definition.title}`} size="lg">
+        <div className="space-y-4">
+          <p className="text-sm text-ink">
+            <strong>{importRows?.length ?? 0} baris</strong> siap diimpor.
+            {importIssues.length > 0 && <> {importIssues.length} baris dilewati karena tidak valid.</>}
+          </p>
+          {importIssues.length > 0 && (
+            <div className="max-h-40 overflow-y-auto rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
+              <p className="mb-2 text-xs font-semibold uppercase text-amber-800">Baris dilewati</p>
+              <ul className="space-y-1 text-xs text-amber-900">
+                {importIssues.slice(0, 30).map((issue) => <li key={issue.line}>Baris {issue.line}: {issue.message}</li>)}
+              </ul>
+            </div>
+          )}
+          <div className="max-h-64 overflow-auto rounded-lg border border-line">
+            <table className="w-full text-left text-xs">
+              <thead className="sticky top-0 bg-slate-50">
+                <tr>{definition.fields.map((field) => <th key={field.name} className="whitespace-nowrap px-3 py-2 font-semibold text-slate-600">{field.label}</th>)}</tr>
+              </thead>
+              <tbody className="divide-y divide-line">
+                {(importRows || []).slice(0, 20).map((record, index) => (
+                  <tr key={index}>{definition.fields.map((field) => <td key={field.name} className="whitespace-nowrap px-3 py-2 text-ink">{displayValue(record[field.name])}</td>)}</tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {(importRows?.length ?? 0) > 20 && <p className="text-xs text-slate-500">Menampilkan 20 baris pertama dari {importRows?.length} data.</p>}
+          <div className="flex justify-end gap-2 border-t border-line pt-4">
+            <Button type="button" variant="secondary" onClick={() => { setImportRows(null); setImportIssues([]); }}>Batal</Button>
+            <Button type="button" loading={isImporting} onClick={() => void runImport()}>Impor {importRows?.length ?? 0} data</Button>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal isOpen={confirmDelete !== null} onClose={() => setConfirmDelete(null)} title={`Hapus ${definition.title}`}>
+        {confirmDelete && (
+          <div className="space-y-4">
+            <p className="text-sm text-ink">
+              Hapus permanen <strong>{displayValue(confirmDelete[definition.primaryField])}</strong>?
+              Tindakan ini tidak dapat dibatalkan.
+            </p>
+            <p className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-900">
+              Jika data ini sudah dipakai transaksi, penghapusan akan ditolak. Gunakan <strong>Nonaktifkan</strong> agar riwayat tetap utuh.
+            </p>
+            <div className="flex justify-end gap-2 border-t border-line pt-4">
+              <Button type="button" variant="secondary" onClick={() => setConfirmDelete(null)}>Batal</Button>
+              <Button type="button" variant="danger" loading={isBulkBusy} onClick={() => void removeRow(confirmDelete)}>Hapus permanen</Button>
+            </div>
+          </div>
+        )}
       </Modal>
     </AppShell>
   );

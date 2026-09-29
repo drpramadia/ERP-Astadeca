@@ -4,7 +4,7 @@
 // ENUMS
 // ============================================
 
-export type ContractStatus = 'DRAFT' | 'SUBMITTED' | 'PENDING_APPROVAL' | 'APPROVED' | 'ACTIVE' | 'SUSPENDED' | 'COMPLETED' | 'CANCELLED';
+export type ContractStatus = 'DRAFT' | 'SUBMITTED' | 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED' | 'ACTIVE' | 'SUSPENDED' | 'COMPLETED' | 'CANCELLED';
 export type BillingFrequency = 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'QUARTERLY';
 export type RateType = 'STANDARD' | 'CUSTOMER' | 'STORAGE' | 'LOCATION' | 'CATEGORY' | 'PRODUCT';
 export type RateStatus = 'ACTIVE' | 'INACTIVE' | 'PENDING_APPROVAL';

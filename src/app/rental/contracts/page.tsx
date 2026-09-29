@@ -57,13 +57,13 @@ const BILLING_OPTS = [
 const STATUS_TONE: Record<string, "neutral"|"success"|"warning"|"danger"|"info"> = {
   DRAFT: "neutral", SUBMITTED: "info", PENDING_APPROVAL: "warning",
   APPROVED: "info", ACTIVE: "success", SUSPENDED: "warning",
-  COMPLETED: "neutral", CANCELLED: "danger",
+  COMPLETED: "neutral", CANCELLED: "danger", REJECTED: "danger",
 };
 
 const STATUS_LABEL: Record<string, string> = {
   DRAFT: "Draft", SUBMITTED: "Submitted", PENDING_APPROVAL: "Menunggu Approval",
   APPROVED: "Disetujui", ACTIVE: "Aktif", SUSPENDED: "Ditangguhkan",
-  COMPLETED: "Selesai", CANCELLED: "Dibatalkan",
+  COMPLETED: "Selesai", CANCELLED: "Dibatalkan", REJECTED: "Ditolak",
 };
 
 export default function RentalContractsPage() {
