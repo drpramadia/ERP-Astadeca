@@ -325,6 +325,8 @@ export default function RentalRatesPage() {
       p_discount_percentage: discount,
       p_effective_to: form.effective_to || null,
       p_notes: form.notes || null,
+      p_minimum_quantity_kg: parseFloat(form.minimum_quantity_kg) || 0,
+      p_minimum_days: parseInt(form.minimum_days) || 0,
     };
 
     if (editRate) {
@@ -435,7 +437,7 @@ export default function RentalRatesPage() {
         <PageHeader
           eyebrow="COLD STORAGE"
           title="Tarif Sewa"
-          description="Pengaturan tarif sewa cold storage per kg/hari, customer, dan periode berlaku."
+          description="Pengaturan tarif sewa cold storage per kg/hari. Harga sudah termasuk PPN, listrik, jasa, maintenance & kebersihan."
           actions={
             <Button onClick={canWrite ? openCreate : undefined} icon={<Plus className="h-4 w-4" />} disabled={!canWrite}>
               Tambah Tarif
@@ -649,7 +651,7 @@ export default function RentalRatesPage() {
           isOpen={modalOpen}
           onClose={() => setModalOpen(false)}
           title={editRate ? "Edit Tarif Sewa" : "Tambah Tarif Sewa"}
-          description="Pengaturan tarif sewa cold storage. Diskon di atas 10% memerlukan persetujuan Director."
+          description="Harga sudah termasuk PPN, listrik, jasa, maintenance &amp; kebersihan. Diskon di atas 10% memerlukan persetujuan Director."
           size="lg"
         >
           <form onSubmit={handleSubmit} className="space-y-5">

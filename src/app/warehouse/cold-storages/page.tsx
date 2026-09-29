@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Modal } from "@/components/ui/modal";
 import { createClient } from "@/lib/supabase/client";
+import { ColdStorageMonitoring } from "@/components/cold-storage-monitoring";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -289,6 +290,8 @@ export default function ColdStoragesPage() {
             )
           }
         />
+
+        <ColdStorageMonitoring />
 
         {/* ── Stats bar (storage list view) ── */}
         {!selectedStorage && (
