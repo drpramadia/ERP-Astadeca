@@ -132,7 +132,7 @@ export default function PurchasingPage() {
         p_supplier_id: poForm.supplierId,
         p_order_date: poForm.orderDate,
         p_expected_date: poForm.expectedDate || null,
-        p_items: JSON.stringify(items),
+        p_items: items,
         p_notes: poForm.notes,
         p_requester_id: userId,
       } as Record<string, unknown>);
@@ -190,11 +190,11 @@ export default function PurchasingPage() {
       }));
       const { error } = await supabase.rpc("create_pr_draft", {
         p_org_id: orgId,
-        p_supplier_id: prForm.supplierId,
+        p_supplier_id: prForm.supplierId || null,
         p_request_date: prForm.requestDate,
         p_needed_date: prForm.neededDate || null,
-        p_items: JSON.stringify(items),
-        p_notes: prForm.notes,
+        p_items: items,
+        p_notes: prForm.notes || "",
         p_requester_id: userId,
       } as Record<string, unknown>);
       if (error) throw error;

@@ -437,7 +437,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   return (
       <div className="min-h-screen bg-canvas text-ink">
       <div className="flex min-h-screen">
-        <aside className={`hidden border-r border-white/[0.07] bg-gradient-to-br from-[#1a2a32] via-sidebar to-[#0d151b] text-slate-100 lg:flex lg:flex-col transition-all duration-200 ${sidebarCollapsed ? "w-[68px]" : "w-[286px]"}`}>
+        <aside className={`hidden border-r border-white/[0.07] bg-gradient-to-br from-[#1a2a32] via-sidebar to-[#0d151b] text-slate-100 lg:flex lg:flex-col lg:sticky lg:top-0 lg:h-screen transition-all duration-200 ${sidebarCollapsed ? "w-[68px]" : "w-[286px]"}`}>
           <div className={`border-b border-white/[0.07] px-4 py-4 ${sidebarCollapsed ? "flex justify-center" : "px-5 py-5"}`}>
             {!sidebarCollapsed && (
               <div className="flex items-center gap-3">
@@ -488,8 +488,8 @@ export function AppShell({ children }: { children: ReactNode }) {
           </nav>
         </aside>
 
-        <div className="flex min-w-0 flex-1 flex-col">
-          <header className="sticky top-0 z-20 border-b border-line/80 bg-white/88 shadow-[0_8px_24px_rgb(20_35_43_/_4%)] backdrop-blur-xl">
+        <div className="flex min-w-0 flex-1 flex-col lg:sticky lg:top-0 lg:h-screen">
+          <header className="sticky top-0 z-20 border-b border-line/80 bg-white/88 shadow-[0_8px_24px_rgb(20_35_43_/_4%)] backdrop-blur-xl lg:relative">
             <div className="flex h-18 items-center gap-3 px-4 sm:px-6">
               <button type="button" onClick={() => setMobileNavOpen(true)} className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-line text-slate-600 lg:hidden" aria-label="Buka navigasi" aria-expanded={mobileNavOpen} aria-controls="mobile-navigation">
                 <MenuIcon className="h-5 w-5" />
