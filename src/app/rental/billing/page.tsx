@@ -107,55 +107,38 @@ export default function BillingPage() {
       const claims = claimsData?.claims;
       if (!claims) throw new Error("Not authenticated");
 
-      // Get invoice number
-      const { data: numData } = await supabase
-        .from("document_sequences")
-        .select("next_value")
-        .eq("org_id", claims.sub)
-        .eq("doc_type", "INV")
+      // Get org_id
+      const { data: membership } = await supabase
+        .from("organization_memberships")
+        .select("organization_id")
+        .eq("user_id", claims.sub)
+        .eq("is_active", true)
         .maybeSingle();
-      let invNum = "INV-2026-000001";
-      if (numData) {
-        invNum = `INV-${new Date().getFullYear()}-${String(numData.next_value).padStart(6, "0")}`;
-        await supabase.from("document_sequences")
-          .update({ next_value: numData.next_value + 1 })
-          .eq("org_id", claims.sub)
-          .eq("doc_type", "INV");
-      }
+      if (!membership) throw new Error("Tidak ada keanggotaan organisasi aktif.");
 
-      const { data: claimsData2 } = await supabase.auth.getClaims();
-      const orgId = (claimsData2?.claims as any)?.org_id;
-      if (!orgId) {
-        const { data: m } = await supabase.from("organization_memberships")
-          .select("organization_id").eq("user_id", claims.sub).eq("is_active", true).maybeSingle();
-        if (!m) throw new Error("No org");
-        const orgId2 = m.organization_id;
-        await supabase.from("rental_billing_invoices").insert({
-          organization_id: orgId2,
-          contract_id: form.contractId,
-          invoice_number: invNum,
-          billing_period_start: form.periodStart,
-          billing_period_end: form.periodEnd,
-          total_amount: parseFloat(form.totalAmount),
-          status: "DRAFT",
-          due_date: form.dueDate || null,
-          notes: form.notes || null,
-          created_by: claims.sub,
-        });
-      } else {
-        await supabase.from("rental_billing_invoices").insert({
-          organization_id: orgId,
-          contract_id: form.contractId,
-          invoice_number: invNum,
-          billing_period_start: form.periodStart,
-          billing_period_end: form.periodEnd,
-          total_amount: parseFloat(form.totalAmount),
-          status: "DRAFT",
-          due_date: form.dueDate || null,
-          notes: form.notes || null,
-          created_by: claims.sub,
-        });
-      }
+      const orgId = membership.organization_id;
+
+      // Get next invoice number via RPC
+      const { data: invNum } = await supabase.rpc("get_next_number", {
+        p_org_id: orgId,
+        p_doc_type: "INV",
+      });
+      const invoiceNumber = (invNum as string) || `INV-${new Date().getFullYear()}-000001`;
+
+      const { error: insertError } = await supabase.from("rental_billing_invoices").insert({
+        organization_id: orgId,
+        contract_id: form.contractId,
+        invoice_number: invoiceNumber,
+        billing_period_start: form.periodStart,
+        billing_period_end: form.periodEnd,
+        total_amount: parseFloat(form.totalAmount),
+        status: "DRAFT",
+        due_date: form.dueDate || null,
+        notes: form.notes || null,
+        created_by: claims.sub,
+      });
+      if (insertError) throw insertError;
+
       setMessage("Invoice billing berhasil dibuat.");
       setShowCreate(false);
       setForm(blankForm);
