@@ -245,7 +245,7 @@ export default function RentalContractsPage() {
     try {
       const { error: decideError } = await createClient().rpc("decide_approval_request", {
         p_approval_request_id: contract.approval_request_id,
-        p_action: action,
+        p_action: action === "approve" ? "APPROVE" : "REJECT",
         p_comment: action === "approve" ? "Disetujui." : "Ditolak.",
         p_actor_user_id: actorId,
       } as Record<string, unknown>);
