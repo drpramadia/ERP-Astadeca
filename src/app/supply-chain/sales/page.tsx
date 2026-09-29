@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { PageHeader } from "@/components/page-header";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { StockBadge } from "@/components/ui/stock-badge";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 import { Input } from "@/components/ui/input";
@@ -78,6 +79,7 @@ export default function SalesPage() {
   const [quotations, setQuotations] = useState<Quotation[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
+  const [stockLevels, setStockLevels] = useState<Record<string, { available: number; minimum: number }>>({});
   const [units, setUnits] = useState<Unit[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [orgId, setOrgId] = useState<string>("");
@@ -128,29 +130,24 @@ export default function SalesPage() {
       const orgId = membership.organization_id;
       setOrgId(orgId);
 
-      const [ordersRes, quotationsRes, productsRes, customersRes, unitsRes] = await Promise.all([
-        supabase
-          .from("sales_orders")
-          .select("*, so_customer_fk(name, code)")
-          .eq("organization_id", orgId)
-          .order("order_date", { ascending: false })
-          .limit(50),
-        supabase
-          .from("quotations")
-          .select("*, qt_customer_fk(name, code)")
-          .eq("organization_id", orgId)
-          .order("quotation_date", { ascending: false })
-          .limit(50),
+      const [ordersRes, quotationsRes, productsRes, customersRes, unitsRes, stockRes] = await Promise.all([
+        supabase.from("sales_orders").select("*, so_customer_fk(name, code)").eq("organization_id", orgId).order("order_date", { ascending: false }).limit(50),
+        supabase.from("quotations").select("*, qt_customer_fk(name, code)").eq("organization_id", orgId).order("quotation_date", { ascending: false }).limit(50),
         supabase.from("products").select("id, name, sku").eq("organization_id", orgId).order("name"),
         supabase.from("customers").select("id, name, code").eq("active", true).order("name"),
+        supabase.from("inventory_levels").select("product_id, available_quantity, minimum_stock").eq("organization_id", orgId),
         supabase.from("units").select("id, code, name").eq("active", true).order("name"),
-      ]);
+      ]) as unknown as [{data: any},{data: any},{data: any},{data: any},{data: any},{data: any}];
 
-      setOrders(ordersRes.data || []);
-      setQuotations(quotationsRes.data || []);
-      setProducts(productsRes.data || []);
-      setCustomers(customersRes.data || []);
-      setUnits(unitsRes.data || []);
+      setOrders(ordersRes?.data || []);
+      setQuotations(quotationsRes?.data || []);
+      setProducts(productsRes?.data || []);
+      setCustomers(customersRes?.data || []);
+      setUnits(unitsRes?.data || []);
+      setStockLevels(((stockRes as any)?.data || []).reduce((acc: Record<string, {available:number;minimum:number}>, s: any) => {
+        if (s?.product_id) acc[s.product_id] = { available: Number(s.available_quantity) || 0, minimum: Number(s.minimum_stock) || 10 };
+        return acc;
+      }, {}));
       setIsLoading(false);
     }
     init();
@@ -312,8 +309,27 @@ export default function SalesPage() {
     CANCELLED: { label: "Dibatalkan", tone: "danger" },
   };
 
+  const lowStockCount = Object.values(stockLevels).filter(s => s.available < s.minimum && s.available > 0).length;
+  const outOfStockCount = Object.values(stockLevels).filter(s => s.available === 0).length;
+
   return (
     <AppShell>
+      {lowStockCount > 0 || outOfStockCount > 0 ? (
+        <div className="mx-auto max-w-7xl mt-4">
+          <div className={`rounded-xl border px-4 py-3 text-sm flex items-center gap-3 ${outOfStockCount > 0 ? "border-red-200 bg-red-50" : "border-amber-200 bg-amber-50"}`}>
+            <svg className={`h-5 w-5 shrink-0 ${outOfStockCount > 0 ? "text-red-500" : "text-amber-500"}`} fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+            </svg>
+            <span className={outOfStockCount > 0 ? "text-red-700" : "text-amber-700"}>
+              {outOfStockCount > 0 && <strong>{outOfStockCount} produk habis</strong>}
+              {outOfStockCount > 0 && lowStockCount > 0 && " · "}
+              {lowStockCount > 0 && <strong>{lowStockCount} produk menipis</strong>}
+              {!outOfStockCount && lowStockCount > 0 && <span>Peringatan: {lowStockCount} produk stok menipis. Lihat di Warehouse Inventory.</span>}
+              {outOfStockCount > 0 && <span className="text-red-600"> Stok tidak mencukupi untuk beberapa item.</span>}
+            </span>
+          </div>
+        </div>
+      ) : null}
       <div className="mx-auto max-w-7xl">
         <PageHeader
           eyebrow="SUPPLY CHAIN"
@@ -531,7 +547,7 @@ export default function SalesPage() {
                           onChange={e => { const next = [...quotationItems]; next[idx].product_id = e.target.value; setQuotationItems(next); }}
                         >
                           <option value="">Pilih</option>
-                          {products.map(p => <option key={p.id} value={p.id}>{p.sku} · {p.name}</option>)}
+                          {products.map(p => { const s = stockLevels[p.id]; return <option key={p.id} value={p.id}>{p.sku} · {p.name}{s ? ` [${s.available} unit${s.available < s.minimum ? ' ⚠' : ''}]` : ''}</option>; })}
                         </select>
                       </td>
                       <td className="px-3 py-2">
@@ -692,7 +708,7 @@ export default function SalesPage() {
                           onChange={e => { const next = [...soItems]; next[idx].product_id = e.target.value; setSoItems(next); }}
                         >
                           <option value="">Pilih</option>
-                          {products.map(p => <option key={p.id} value={p.id}>{p.sku} · {p.name}</option>)}
+                          {products.map(p => { const s = stockLevels[p.id]; return <option key={p.id} value={p.id}>{p.sku} · {p.name}{s ? ` [${s.available} unit${s.available < s.minimum ? ' ⚠' : ''}]` : ''}</option>; })}
                         </select>
                       </td>
                       <td className="px-3 py-2">
