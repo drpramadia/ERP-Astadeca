@@ -14,7 +14,7 @@ import { formatCurrency, formatDate } from "@/lib/utils";
 
 interface SalesOrder {
   id: string;
-  order_number: string;
+  so_number: string;
   customer_id: string;
   status: string;
   order_date: string;
@@ -23,7 +23,7 @@ interface SalesOrder {
   tax_amount: number;
   total_amount: number;
   notes?: string;
-  customers?: { name: string; code: string };
+  so_customer_fk?: { name: string; code: string };
 }
 
 interface QuotationItemRow {
@@ -69,7 +69,7 @@ interface Quotation {
   valid_until?: string;
   total_amount: number;
   notes?: string;
-  customers?: { name: string; code: string };
+  qt_customer_fk?: { name: string; code: string };
 }
 
 export default function SalesPage() {
@@ -131,13 +131,13 @@ export default function SalesPage() {
       const [ordersRes, quotationsRes, productsRes, customersRes, unitsRes] = await Promise.all([
         supabase
           .from("sales_orders")
-          .select("*, customers(name, code)")
+          .select("*, so_customer_fk(name, code)")
           .eq("organization_id", orgId)
           .order("order_date", { ascending: false })
           .limit(50),
         supabase
           .from("quotations")
-          .select("*, customers(name, code)")
+          .select("*, qt_customer_fk(name, code)")
           .eq("organization_id", orgId)
           .order("quotation_date", { ascending: false })
           .limit(50),
@@ -174,22 +174,11 @@ export default function SalesPage() {
       const validItems = quotationItems.filter(i => i.product_id && i.quantity && i.unit_id && i.unit_price);
       const subtotal = validItems.reduce((sum, i) => sum + (parseFloat(i.quantity) || 0) * (parseFloat(i.unit_price) || 0), 0);
 
-      const { data: numData } = await supabase
-        .from("document_sequences")
-        .select("next_value")
-        .eq("org_id", orgId)
-        .eq("doc_type", "QT")
-        .maybeSingle();
-
-      let qtNumber = "QT-2026-000001";
-      if (numData) {
-        qtNumber = `QT-${new Date().getFullYear()}-${String(numData.next_value).padStart(6, "0")}`;
-        await supabase.from("document_sequences").update({ next_value: numData.next_value + 1 }).eq("org_id", orgId).eq("doc_type", "QT");
-      }
+      const { data: qtNumber } = await supabase.rpc("get_next_number", { p_org_id: orgId, p_doc_type: "QT" });
 
       const insertData: Record<string, unknown> = {
         organization_id: orgId,
-        quotation_number: qtNumber,
+        quotation_number: (qtNumber as string) || "QT-UNKNOWN",
         customer_id: quotationForm.customer_id,
         status: "DRAFT",
         quotation_date: quotationForm.quotation_date,
@@ -214,7 +203,6 @@ export default function SalesPage() {
         quantity: parseFloat(i.quantity),
         unit_id: i.unit_id,
         unit_price: parseFloat(i.unit_price),
-        notes: i.notes || null,
       }));
 
       const { error: itemsErr } = await supabase.from("quotation_items").insert(itemInserts);
@@ -222,7 +210,7 @@ export default function SalesPage() {
 
       const { data: updated } = await supabase
         .from("quotations")
-        .select("*, customers(name, code)")
+        .select("*, qt_customer_fk(name, code)")
         .eq("id", qtData.id)
         .single();
       if (updated) setQuotations(prev => [updated, ...prev]);
@@ -256,22 +244,11 @@ export default function SalesPage() {
       const validItems = soItems.filter(i => i.product_id && i.quantity && i.unit_id && i.unit_price);
       const subtotal = validItems.reduce((sum, i) => sum + (parseFloat(i.quantity) || 0) * (parseFloat(i.unit_price) || 0), 0);
 
-      const { data: numData } = await supabase
-        .from("document_sequences")
-        .select("next_value")
-        .eq("org_id", orgId)
-        .eq("doc_type", "SO")
-        .maybeSingle();
-
-      let soNumber = "SO-2026-000001";
-      if (numData) {
-        soNumber = `SO-${new Date().getFullYear()}-${String(numData.next_value).padStart(6, "0")}`;
-        await supabase.from("document_sequences").update({ next_value: numData.next_value + 1 }).eq("org_id", orgId).eq("doc_type", "SO");
-      }
+      const { data: soNumber } = await supabase.rpc("get_next_number", { p_org_id: orgId, p_doc_type: "SO" });
 
       const insertData: Record<string, unknown> = {
         organization_id: orgId,
-        order_number: soNumber,
+        so_number: (soNumber as string) || "SO-UNKNOWN",
         customer_id: soForm.customer_id,
         status: "DRAFT",
         order_date: soForm.order_date,
@@ -296,7 +273,6 @@ export default function SalesPage() {
         quantity: parseFloat(i.quantity),
         unit_id: i.unit_id,
         unit_price: parseFloat(i.unit_price),
-        notes: i.notes || null,
       }));
 
       const { error: itemsErr } = await supabase.from("sales_order_items").insert(itemInserts);
@@ -308,7 +284,7 @@ export default function SalesPage() {
 
       const { data: updated } = await supabase
         .from("sales_orders")
-        .select("*, customers(name, code)")
+        .select("*, so_customer_fk(name, code)")
         .eq("id", soData.id)
         .single();
       if (updated) setOrders(prev => [updated, ...prev]);
@@ -415,10 +391,10 @@ export default function SalesPage() {
                       const statusInfo = statusOptions[order.status] || { label: order.status, tone: "neutral" as const };
                       return (
                         <tr key={order.id} className="hover:bg-slate-50 transition-colors">
-                          <td className="px-4 py-3 text-sm font-mono font-medium text-ink">{order.order_number}</td>
+                          <td className="px-4 py-3 text-sm font-mono font-medium text-ink">{order.so_number}</td>
                           <td className="px-4 py-3">
-                            <p className="text-sm font-medium text-ink">{order.customers?.name || "-"}</p>
-                            <p className="text-xs text-slate-500">{order.customers?.code || "-"}</p>
+                            <p className="text-sm font-medium text-ink">{order.so_customer_fk?.name || "-"}</p>
+                            <p className="text-xs text-slate-500">{order.so_customer_fk?.code || "-"}</p>
                           </td>
                           <td className="px-4 py-3 text-sm text-ink">{formatDate(order.order_date)}</td>
                           <td className="px-4 py-3 text-right text-sm font-semibold text-ink">{formatCurrency(Number(order.total_amount))}</td>
@@ -468,8 +444,8 @@ export default function SalesPage() {
                       <tr key={quote.id} className="hover:bg-slate-50 transition-colors">
                         <td className="px-4 py-3 text-sm font-mono font-medium text-ink">{quote.quotation_number}</td>
                         <td className="px-4 py-3">
-                          <p className="text-sm font-medium text-ink">{quote.customers?.name || "-"}</p>
-                          <p className="text-xs text-slate-500">{quote.customers?.code || "-"}</p>
+                          <p className="text-sm font-medium text-ink">{quote.qt_customer_fk?.name || "-"}</p>
+                          <p className="text-xs text-slate-500">{quote.qt_customer_fk?.code || "-"}</p>
                         </td>
                         <td className="px-4 py-3 text-sm text-ink">{formatDate(quote.quotation_date)}</td>
                         <td className="px-4 py-3 text-sm text-ink">{quote.valid_until ? formatDate(quote.valid_until) : "-"}</td>
@@ -675,7 +651,7 @@ export default function SalesPage() {
             />
             <Select
               label="Ref. Quotation"
-              options={[{ value: "", label: "Tidak ada" }, ...quotations.filter(q => q.status === "APPROVED" || q.status === "DRAFT").map(q => ({ value: q.id, label: `${q.quotation_number} · ${q.customers?.name || ""}` }))]}
+              options={[{ value: "", label: "Tidak ada" }, ...quotations.filter(q => q.status === "APPROVED" || q.status === "DRAFT").map(q => ({ value: q.id, label: `${q.quotation_number} · ${q.qt_customer_fk?.name || ""}` }))]}
               value={soForm.quotation_id}
               onChange={e => setSoForm(f => ({ ...f, quotation_id: e.target.value }))}
               hint="Opsional"
