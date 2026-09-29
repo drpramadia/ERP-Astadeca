@@ -59,6 +59,12 @@ export default function BillingPage() {
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  // Auto-calculate
+  const [calcResult, setCalcResult] = useState<{
+    total_quantity_kg: number; total_days: number;
+    rate_per_kg_day: number; total_charge: number;
+  } | null>(null);
+
   useEffect(() => {
     if (!loaded || !userId) return;
     async function init() {
@@ -93,6 +99,25 @@ export default function BillingPage() {
     }
     void init().finally(() => setIsLoading(false));
   }, [loaded, userId]);
+
+  async function handleCalculate() {
+    if (!form.contractId || !form.periodStart || !form.periodEnd) {
+      setError("Pilih kontrak dan periode billing terlebih dahulu.");
+      return;
+    }
+    const supabase = createClient();
+    const { data, error: calcErr } = await supabase.rpc("calculate_rental_billing", {
+      p_contract_id: form.contractId,
+      p_period_start: form.periodStart,
+      p_period_end: form.periodEnd,
+    });
+    if (calcErr) { setError("Gagal menghitung: " + calcErr.message); return; }
+    const rows = data as unknown as { total_quantity_kg: number; total_days: number; rate_per_kg_day: number; total_charge: number }[];
+    if (rows && rows.length > 0) {
+      setCalcResult(rows[0]);
+      setForm(f => ({ ...f, totalAmount: rows[0].total_charge.toString() }));
+    }
+  }
 
   async function handleCreate() {
     if (!form.contractId || !form.periodStart || !form.periodEnd || !form.totalAmount) {
