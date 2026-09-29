@@ -3,95 +3,176 @@
 import { useEffect, useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { PageHeader } from "@/components/page-header";
-import { StatusBadge } from "@/components/ui/status-badge";
+import { Button } from "@/components/ui/button";
+import { Modal } from "@/components/ui/modal";
 import { createClient } from "@/lib/supabase/client";
-import { formatNumber, formatCurrency, formatDate } from "@/lib/utils";
+import { useSession } from "@/hooks/use-permissions";
+import { formatDate } from "@/lib/utils";
 
-interface RentalCharge {
-  id: string;
-  charge_number: string;
-  billing_start: string;
-  billing_end: string;
-  quantity_kg_average: number;
-  days_billed: number;
-  rate_per_kg_day: number;
-  subtotal: number;
-  tax_amount: number;
-  total_amount: number;
-  status: string;
-  contracts?: { contract_number: string; title: string };
-  customers?: { name: string };
-  products?: { name: string };
-  cold_storages?: { name: string; code: string };
-}
-
-interface RentalInvoice {
+interface BillingInvoice {
   id: string;
   invoice_number: string;
+  contract_id: string;
   billing_period_start: string;
   billing_period_end: string;
-  issue_date: string;
-  due_date: string;
-  subtotal: number;
-  tax_amount: number;
   total_amount: number;
-  amount_paid: number;
   status: string;
-  contracts?: { contract_number: string; title: string };
-  customers?: { name: string };
+  due_date?: string;
+  notes?: string;
+  created_at: string;
+  rental_contracts?: { contract_number: string; title: string };
 }
 
-export default function RentalBillingPage() {
-  const [activeTab, setActiveTab] = useState<"charges" | "invoices">("charges");
-  const [charges, setCharges] = useState<RentalCharge[]>([]);
-  const [invoices, setInvoices] = useState<RentalInvoice[]>([]);
+interface ContractOption {
+  id: string;
+  contract_number: string;
+  title: string;
+  rental_contracts_customer_fk?: { name: string } | { name: string }[];
+}
+
+interface BillingForm {
+  contractId: string;
+  periodStart: string;
+  periodEnd: string;
+  totalAmount: string;
+  dueDate: string;
+  notes: string;
+}
+
+const blankForm: BillingForm = {
+  contractId: "",
+  periodStart: "",
+  periodEnd: "",
+  totalAmount: "",
+  dueDate: "",
+  notes: "",
+};
+
+export default function BillingPage() {
+  const { userId, loaded } = useSession();
+  const [invoices, setInvoices] = useState<BillingInvoice[]>([]);
+  const [contracts, setContracts] = useState<ContractOption[]>([]);
+  const [showCreate, setShowCreate] = useState(false);
+  const [form, setForm] = useState<BillingForm>(blankForm);
+  const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [message, setMessage] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!loaded || !userId) return;
     async function init() {
       const supabase = createClient();
       const { data: claimsData } = await supabase.auth.getClaims();
       const claims = claimsData?.claims;
       if (!claims) return;
-
       const { data: membership } = await supabase
         .from("organization_memberships")
         .select("organization_id")
         .eq("user_id", claims.sub)
         .eq("is_active", true)
         .maybeSingle();
-
       if (!membership) return;
-      const [chargesRes, invoicesRes] = await Promise.all([
+
+      const [invRes, conRes] = await Promise.all([
         supabase
-          .from("rental_charges")
-          .select("*, contracts(contract_number, title), customers(name), products(name), cold_storages(name, code)")
+          .from("rental_billing_invoices")
+          .select("*, rental_contracts(contract_number, title)")
           .eq("organization_id", membership.organization_id)
-          .order("billing_start", { ascending: false })
+          .order("created_at", { ascending: false })
           .limit(50),
         supabase
-          .from("rental_invoices")
-          .select("*, contracts(contract_number, title), customers(name)")
+          .from("rental_contracts")
+          .select("id, contract_number, title, rental_contracts_customer_fk(name)")
           .eq("organization_id", membership.organization_id)
-          .order("issue_date", { ascending: false })
-          .limit(50),
+          .eq("status", "ACTIVE")
+          .order("contract_number"),
       ]);
-
-      setCharges(chargesRes.data || []);
-      setInvoices(invoicesRes.data || []);
-      setIsLoading(false);
+      setInvoices((invRes.data || []) as BillingInvoice[]);
+      setContracts((conRes.data || []) as ContractOption[]);
     }
-    init();
-  }, []);
+    void init().finally(() => setIsLoading(false));
+  }, [loaded, userId]);
 
-  const invoiceStatusOptions: Record<string, { label: string; tone: "neutral" | "success" | "warning" | "danger" | "info" }> = {
-    DRAFT: { label: "Draft", tone: "neutral" },
-    ISSUED: { label: "Diterbitkan", tone: "info" },
-    SENT: { label: "Terkirim", tone: "warning" },
-    PARTIALLY_PAID: { label: "Sebagian", tone: "warning" },
-    PAID: { label: "Lunas", tone: "success" },
-    OVERDUE: { label: "Jatuh Tempo", tone: "danger" },
-    CANCELLED: { label: "Dibatalkan", tone: "neutral" },
+  async function handleCreate() {
+    if (!form.contractId || !form.periodStart || !form.periodEnd || !form.totalAmount) {
+      setError("Lengkapi semua field wajib.");
+      return;
+    }
+    setIsSaving(true);
+    setError(null);
+    try {
+      const supabase = createClient();
+      const { data: claimsData } = await supabase.auth.getClaims();
+      const claims = claimsData?.claims;
+      if (!claims) throw new Error("Not authenticated");
+
+      // Get invoice number
+      const { data: numData } = await supabase
+        .from("document_sequences")
+        .select("next_value")
+        .eq("org_id", claims.sub)
+        .eq("doc_type", "INV")
+        .maybeSingle();
+      let invNum = "INV-2026-000001";
+      if (numData) {
+        invNum = `INV-${new Date().getFullYear()}-${String(numData.next_value).padStart(6, "0")}`;
+        await supabase.from("document_sequences")
+          .update({ next_value: numData.next_value + 1 })
+          .eq("org_id", claims.sub)
+          .eq("doc_type", "INV");
+      }
+
+      const { data: claimsData2 } = await supabase.auth.getClaims();
+      const orgId = (claimsData2?.claims as any)?.org_id;
+      if (!orgId) {
+        const { data: m } = await supabase.from("organization_memberships")
+          .select("organization_id").eq("user_id", claims.sub).eq("is_active", true).maybeSingle();
+        if (!m) throw new Error("No org");
+        const orgId2 = m.organization_id;
+        await supabase.from("rental_billing_invoices").insert({
+          organization_id: orgId2,
+          contract_id: form.contractId,
+          invoice_number: invNum,
+          billing_period_start: form.periodStart,
+          billing_period_end: form.periodEnd,
+          total_amount: parseFloat(form.totalAmount),
+          status: "DRAFT",
+          due_date: form.dueDate || null,
+          notes: form.notes || null,
+          created_by: claims.sub,
+        });
+      } else {
+        await supabase.from("rental_billing_invoices").insert({
+          organization_id: orgId,
+          contract_id: form.contractId,
+          invoice_number: invNum,
+          billing_period_start: form.periodStart,
+          billing_period_end: form.periodEnd,
+          total_amount: parseFloat(form.totalAmount),
+          status: "DRAFT",
+          due_date: form.dueDate || null,
+          notes: form.notes || null,
+          created_by: claims.sub,
+        });
+      }
+      setMessage("Invoice billing berhasil dibuat.");
+      setShowCreate(false);
+      setForm(blankForm);
+      window.location.reload();
+    } catch (e: any) {
+      setError(e?.message || "Gagal membuat invoice.");
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  const statusLabels: Record<string, { label: string; tone: string }> = {
+    DRAFT: { label: "Draft", tone: "bg-slate-100 text-slate-700" },
+    SENT: { label: "Terkirim", tone: "bg-blue-100 text-blue-700" },
+    PAID: { label: "Lunas", tone: "bg-emerald-100 text-emerald-700" },
+    OVERDUE: { label: "Jatuh Tempo", tone: "bg-red-100 text-red-700" },
+    CANCELLED: { label: "Batal", tone: "bg-slate-100 text-slate-500" },
   };
 
   return (
@@ -99,145 +180,121 @@ export default function RentalBillingPage() {
       <div className="mx-auto max-w-7xl">
         <PageHeader
           eyebrow="COLD STORAGE RENTAL"
-          title="Penagihan"
-          description="Riwayat tagihan dan invoice penyewaan cold storage."
+          title="Billing"
+          description="Kelola invoice penagihan sewa cold storage per periode."
+          actions={
+            <Button variant="primary" size="sm" onClick={() => { setShowCreate(true); setError(null); setMessage(null); }}>
+              + Invoice Baru
+            </Button>
+          }
         />
-
-        <div className="mb-6 flex items-center gap-4 border-b border-line">
-          <button
-            onClick={() => setActiveTab("charges")}
-            className={`pb-3 px-1 text-sm font-medium transition-colors ${
-              activeTab === "charges"
-                ? "border-b-2 border-primary text-primary"
-                : "text-slate-500 hover:text-ink"
-            }`}
-          >
-            Charge Ledger
-          </button>
-          <button
-            onClick={() => setActiveTab("invoices")}
-            className={`pb-3 px-1 text-sm font-medium transition-colors ${
-              activeTab === "invoices"
-                ? "border-b-2 border-primary text-primary"
-                : "text-slate-500 hover:text-ink"
-            }`}
-          >
-            Invoice
-          </button>
-        </div>
+        {error && <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
+        {message && <div className="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{message}</div>}
 
         {isLoading ? (
-          <div className="flex items-center justify-center h-64">
-            <div className="flex flex-col items-center gap-3">
-              <div className="h-8 w-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-              <p className="text-sm text-slate-500">Memuat data...</p>
-            </div>
-          </div>
-        ) : activeTab === "charges" ? (
-          charges.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-line bg-white p-12 text-center">
-              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-slate-100">
-                <svg className="h-6 w-6 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                </svg>
-              </div>
-              <h3 className="mt-4 text-base font-semibold text-ink">Belum ada charge</h3>
-              <p className="mt-2 text-sm text-slate-500">
-                Charge akan muncul setelah ada barang rental yang aktif.
-              </p>
-            </div>
-          ) : (
-            <div className="rounded-xl border border-line bg-white overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-line bg-slate-50">
-                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-600">Nomor</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-600">Customer</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-600">Periode</th>
-                      <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-600">Qty Avg</th>
-                      <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-600">Hari</th>
-                      <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-600">Rate</th>
-                      <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-600">Total</th>
-                      <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider text-slate-600">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-line">
-                    {charges.map((charge) => (
-                      <tr key={charge.id} className="hover:bg-slate-50 transition-colors">
-                        <td className="px-4 py-3 text-sm font-mono text-ink">{charge.charge_number}</td>
-                        <td className="px-4 py-3 text-sm font-medium text-ink">{charge.customers?.name || "-"}</td>
-                        <td className="px-4 py-3 text-sm text-ink">
-                          {formatDate(charge.billing_start)} - {formatDate(charge.billing_end)}
-                        </td>
-                        <td className="px-4 py-3 text-right text-sm text-ink">{formatNumber(charge.quantity_kg_average)} KG</td>
-                        <td className="px-4 py-3 text-right text-sm text-ink">{charge.days_billed}</td>
-                        <td className="px-4 py-3 text-right text-sm text-ink">{formatCurrency(charge.rate_per_kg_day)}/KG/hari</td>
-                        <td className="px-4 py-3 text-right text-sm font-semibold text-ink">{formatCurrency(charge.total_amount)}</td>
-                        <td className="px-4 py-3 text-center">
-                          <StatusBadge tone={charge.status === "INVOICED" ? "success" : "warning"}>
-                            {charge.status === "PENDING" ? "Tertunda" : charge.status === "INVOICED" ? "Difakturkan" : charge.status}
-                          </StatusBadge>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )
+          <div className="py-12 text-center text-sm text-slate-500">Memuat invoice...</div>
         ) : invoices.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-line bg-white p-12 text-center">
-            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-slate-100">
-              <svg className="h-6 w-6 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-            </div>
-            <h3 className="mt-4 text-base font-semibold text-ink">Belum ada invoice</h3>
-            <p className="mt-2 text-sm text-slate-500">
-              Invoice akan muncul setelah ada charge yang diinvoice.
-            </p>
+          <div className="rounded-xl border border-dashed border-slate-300 p-12 text-center">
+            <p className="text-sm text-slate-500">Belum ada invoice billing.</p>
           </div>
         ) : (
-          <div className="rounded-xl border border-line bg-white overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-line bg-slate-50">
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-600">Nomor Invoice</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-600">Customer</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-600">Periode</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-600">Jatuh Tempo</th>
-                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-600">Total</th>
-                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-600">Dibayar</th>
-                    <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider text-slate-600">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-line">
-                  {invoices.map((invoice) => {
-                    const statusInfo = invoiceStatusOptions[invoice.status] || { label: invoice.status, tone: "neutral" as const };
-                    return (
-                      <tr key={invoice.id} className="hover:bg-slate-50 transition-colors">
-                        <td className="px-4 py-3 text-sm font-mono font-medium text-ink">{invoice.invoice_number}</td>
-                        <td className="px-4 py-3 text-sm font-medium text-ink">{invoice.customers?.name || "-"}</td>
-                        <td className="px-4 py-3 text-sm text-ink">
-                          {formatDate(invoice.billing_period_start)} - {formatDate(invoice.billing_period_end)}
-                        </td>
-                        <td className="px-4 py-3 text-sm text-ink">{formatDate(invoice.due_date)}</td>
-                        <td className="px-4 py-3 text-right text-sm font-semibold text-ink">{formatCurrency(invoice.total_amount)}</td>
-                        <td className="px-4 py-3 text-right text-sm text-ink">{formatCurrency(invoice.amount_paid)}</td>
-                        <td className="px-4 py-3 text-center">
-                          <StatusBadge tone={statusInfo.tone}>{statusInfo.label}</StatusBadge>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+          <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
+            <table className="w-full min-w-[800px]">
+              <thead>
+                <tr className="border-b border-slate-100 bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  <th className="px-4 py-3">No. Invoice</th>
+                  <th className="px-4 py-3">Kontrak</th>
+                  <th className="px-4 py-3">Periode</th>
+                  <th className="px-4 py-3 text-right">Total</th>
+                  <th className="px-4 py-3 text-right">Jatuh Tempo</th>
+                  <th className="px-4 py-3 text-center">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {invoices.map((inv) => {
+                  const st = statusLabels[inv.status] || { label: inv.status, tone: "bg-slate-100 text-slate-700" };
+                  return (
+                    <tr key={inv.id} className="hover:bg-slate-50">
+                      <td className="px-4 py-3 font-mono text-sm font-medium">{inv.invoice_number}</td>
+                      <td className="px-4 py-3 text-sm">
+                        <p className="font-medium">{inv.rental_contracts?.contract_number || "—"}</p>
+                        <p className="text-xs text-slate-500">{inv.rental_contracts?.title || ""}</p>
+                      </td>
+                      <td className="px-4 py-3 text-sm">
+                        {formatDate(inv.billing_period_start)} – {formatDate(inv.billing_period_end)}
+                      </td>
+                      <td className="px-4 py-3 text-right font-mono text-sm font-semibold">
+                        Rp {inv.total_amount.toLocaleString("id-ID")}
+                      </td>
+                      <td className="px-4 py-3 text-right text-sm">
+                        {inv.due_date ? formatDate(inv.due_date) : "—"}
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${st.tone}`}>{st.label}</span>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         )}
       </div>
+
+      <Modal isOpen={showCreate} onClose={() => setShowCreate(false)} title="Invoice Billing Baru" size="md">
+        <form onSubmit={(e) => { e.preventDefault(); void handleCreate(); }} className="space-y-4">
+          <div>
+            <label className="mb-1 block text-sm font-medium text-slate-700">Kontrak Aktif *</label>
+            <select
+              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+              value={form.contractId}
+              onChange={(e) => setForm((f) => ({ ...f, contractId: e.target.value }))}
+              required
+            >
+              <option value="">Pilih kontrak...</option>
+              {contracts.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.contract_number} · {c.title} ({Array.isArray(c.rental_contracts_customer_fk) ? c.rental_contracts_customer_fk[0]?.name : c.rental_contracts_customer_fk?.name || "—"})
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="mb-1 block text-sm font-medium text-slate-700">Periode Mulai *</label>
+              <input type="date" className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                value={form.periodStart} onChange={(e) => setForm((f) => ({ ...f, periodStart: e.target.value }))} required />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-slate-700">Periode Selesai *</label>
+              <input type="date" className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                value={form.periodEnd} onChange={(e) => setForm((f) => ({ ...f, periodEnd: e.target.value }))} required />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="mb-1 block text-sm font-medium text-slate-700">Total Amount (Rp) *</label>
+              <input type="number" className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                value={form.totalAmount} onChange={(e) => setForm((f) => ({ ...f, totalAmount: e.target.value }))}
+                placeholder="0" min="0" required />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-slate-700">Jatuh Tempo</label>
+              <input type="date" className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                value={form.dueDate} onChange={(e) => setForm((f) => ({ ...f, dueDate: e.target.value }))} />
+            </div>
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-slate-700">Catatan</label>
+            <textarea className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" rows={3}
+              value={form.notes} onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} placeholder="Opsional" />
+          </div>
+          <div className="flex justify-end gap-2 border-t pt-4">
+            <Button type="button" variant="secondary" onClick={() => setShowCreate(false)}>Batal</Button>
+            <Button type="submit" loading={isSaving}>Simpan Draft</Button>
+          </div>
+        </form>
+      </Modal>
     </AppShell>
   );
 }
