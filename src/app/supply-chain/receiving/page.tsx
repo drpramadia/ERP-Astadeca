@@ -216,7 +216,7 @@ export default function ReceivingPage() {
         unit_id: item.units?.id || item.unit_id,
         unit_code: item.units?.code || "",
         quantity_ordered: item.quantity,
-        quantity_received: 0,
+        quantity_received: Math.max(0, (item.quantity || 0) - (item.received_quantity || 0)),
         unit_price: item.unit_price,
         batch_number: "",
         production_date: "",
@@ -243,8 +243,8 @@ export default function ReceivingPage() {
     setFormError("");
     setFormSuccess("");
     if (!selectedPoId) { setFormError("Pilih Purchase Order."); return; }
-    const items = formItems.filter((i) => i.quantity_received > 0 && i.product_id);
-    if (!items.length) { setFormError("Masukkan jumlah yang diterima untuk minimal satu item."); return; }
+    const items = formItems.filter((i) => i.product_id);
+    if (!items.length) { setFormError("Pilih item dari Purchase Order."); return; }
 
     setSaving(true);
     try {
@@ -253,18 +253,21 @@ export default function ReceivingPage() {
       const userId = claimsData?.claims?.sub;
       if (!userId) throw new Error("Tidak dapat mengidentifikasi user.");
 
-      const rpcItems = items.map((item) => ({
-        po_item_id: item.po_item_id,
-        product_id: item.product_id,
-        actual_quantity: item.quantity_received,
-        unit_id: item.unit_id,
-        batch_number: item.batch_number || null,
-        production_date: item.production_date || null,
-        expiry_date: item.expiry_date || null,
-        cold_storage_id: item.cold_storage_id || null,
-        storage_location_id: item.storage_location_id || null,
-        notes: item.notes || null,
-      }));
+      const rpcItems = items
+        .filter((item) => item.quantity_received > 0)
+        .map((item) => ({
+          po_item_id: item.po_item_id,
+          product_id: item.product_id,
+          actual_quantity: item.quantity_received,
+          unit_id: item.unit_id,
+          batch_number: item.batch_number || null,
+          production_date: item.production_date || null,
+          expiry_date: item.expiry_date || null,
+          cold_storage_id: item.cold_storage_id || null,
+          storage_location_id: item.storage_location_id || null,
+          notes: item.notes || null,
+        }));
+      if (!rpcItems.length) { setFormError("Jumlah diterima tidak boleh 0 untuk semua item."); setSaving(false); return; }
 
       const { data, error } = await supabase.rpc("create_receiving_from_po", {
         p_po_id: selectedPoId,
