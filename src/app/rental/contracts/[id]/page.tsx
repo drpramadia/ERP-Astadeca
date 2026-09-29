@@ -64,7 +64,7 @@ export default function ContractDetailPage() {
       const [{ data: cData, error: cErr }, { data: aData, error: aErr }] = await Promise.all([
         supabase
           .from("rental_contracts")
-          .select(`*, customers(name, code), cold_storages(name, code), profiles(full_name)`)
+          .select(`*, customers(name, code), cold_storages(name, code), profiles!rental_contracts_created_by_fkey(full_name)`)
           .eq("id", contractId)
           .eq("organization_id", memb.organization_id)
           .single(),

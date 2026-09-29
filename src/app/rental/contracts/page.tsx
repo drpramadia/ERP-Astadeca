@@ -106,7 +106,7 @@ export default function RentalContractsPage() {
         supabase.rpc("has_org_permission", { p_org_id: memb.organization_id, p_permission_code: "rental.manage" }),
       ]);
       setCustomers((custData ?? []) as RentalCustomer[]);
-      setCanManage(Boolean(permData?.data));
+      setCanManage(Boolean(permData));
       loadContracts(memb.organization_id);
     }
     void init();
