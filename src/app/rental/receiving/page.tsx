@@ -35,6 +35,23 @@ interface ItemRow {
   binLocation: string;
 }
 
+interface QCCheckItem {
+  id: string;
+  checklist_item: string;
+  description: string | null;
+  is_required: boolean;
+  check_type: string;
+  sort_order: number;
+}
+
+interface QCResult {
+  [templateId: string]: {
+    pass: boolean | null;
+    value: string;
+    photoUrl: string;
+  };
+}
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function newRow(id: number): ItemRow {
@@ -68,6 +85,11 @@ export default function RentalReceivingPage() {
 
   // Products
   const [products, setProducts] = useState<ProductOption[]>([]);
+
+  // QC Checklist
+  const [qcItems, setQcItems] = useState<QCCheckItem[]>([]);
+  const [qcResults, setQcResults] = useState<QCResult>({});
+  const [showQc, setShowQc] = useState(false);
 
   // UI
   const [isLoading, setIsLoading] = useState(true);
@@ -133,6 +155,15 @@ export default function RentalReceivingPage() {
         if (membershipErr) throw membershipErr;
         if (!membership) throw new Error("Akun belum memiliki organisasi aktif.");
         await load(membership.organization_id, userId);
+
+        // Load QC checklist templates
+        const { data: qcData } = await supabase
+          .from("qc_cs_checklist_templates")
+          .select("*")
+          .eq("organization_id", membership.organization_id)
+          .eq("active", true)
+          .order("sort_order");
+        if (!cancelled) setQcItems((qcData ?? []) as QCCheckItem[]);
       } catch (e) {
         if (!cancelled) setError(e instanceof Error ? e.message : "Gagal memuat data.");
       } finally {

@@ -338,6 +338,7 @@ export const NAV_GROUPS: Array<{
     systems: ["rental", "all"],
     items: [
       { label: "Penyewaan", href: "/rental", icon: GaugeIcon, permission: "rental.view" },
+      { label: "Inquiry", href: "/rental/inquiry", icon: FileIcon, permission: "rental.view" },
       { label: "Keranjang", href: "/rental/baskets", icon: GridIcon, permission: "rental.view" },
       { label: "Kontrak", href: "/rental/contracts", icon: FileIcon, permission: "rental.view" },
       { label: "Penerimaan Barang", href: "/rental/receiving", icon: PackageIcon, permission: "rental.view" },
