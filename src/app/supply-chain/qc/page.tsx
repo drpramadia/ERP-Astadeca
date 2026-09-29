@@ -72,8 +72,18 @@ const resultOptions: Record<string, { label: string; tone: "neutral" | "success"
 // the received goods into inventory, so the buttons only appear while PENDING.
 const PENDING_STATUSES = ["PENDING"];
 
+interface ReceivingGR {
+  id: string;
+  receiving_number: string;
+  received_date: string;
+  status: string;
+  suppliers?: { name: string };
+  purchase_orders?: { po_number: string };
+}
+
 export default function QcPage() {
   const [qc, setQc] = useState<QcRecord[]>([]);
+  const [grWithoutQc, setGrWithoutQc] = useState<ReceivingGR[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState("");
@@ -94,22 +104,45 @@ export default function QcPage() {
 
   const loadQc = useCallback(async (orgId: string) => {
     const supabase = createClient();
-    const { data, error: qcError } = await supabase
-      .from("qc_inspections")
-      .select(`
-        id, qc_number, receiving_id, status, result, inspected_at, notes, created_at,
-        checklist_data, evidence_photos,
-        receiving_records(
-          receiving_number,
-          receiving_items(product_id, batch_number, quantity, actual_quantity, products!ri_product_fk(name))
-        )
-      `)
-      .eq("organization_id", orgId)
-      .order("created_at", { ascending: false })
-      .limit(200);
+    const [qcRes, grRes] = await Promise.all([
+      supabase
+        .from("qc_inspections")
+        .select(`
+          id, qc_number, receiving_id, status, result, inspected_at, notes, created_at,
+          checklist_data, evidence_photos,
+          receiving_records(
+            receiving_number,
+            receiving_items(product_id, batch_number, quantity, actual_quantity, products!ri_product_fk(name))
+          )
+        `)
+        .eq("organization_id", orgId)
+        .order("created_at", { ascending: false })
+        .limit(200),
+      // GRs that don't have a QC inspection yet
+      supabase
+        .from("receiving_records")
+        .select("id, receiving_number, received_date, status, suppliers(name), purchase_orders(po_number)")
+        .eq("organization_id", orgId)
+        .not("status", "eq", "CANCELLED")
+        .order("received_date", { ascending: false })
+        .limit(50),
+    ]);
 
-    if (qcError) throw qcError;
-    return (data || []) as unknown as QcRecord[];
+    if (qcRes.error) throw qcRes.error;
+
+    // Filter GRs that have no QC inspection
+    const qcReceivingIds = new Set(
+      ((qcRes.data || []) as QcRecord[]).map(r => r.receiving_id).filter(Boolean)
+    );
+    const withoutQC = ((grRes.data || []) as ReceivingGR[]).filter(
+      gr => gr.id && !qcReceivingIds.has(gr.id)
+    );
+
+    if (!cancelled) {
+      setQc((qcRes.data || []) as unknown as QcRecord[]);
+      setGrWithoutQc(withoutQC);
+    }
+    return (qcRes.data || []) as unknown as QcRecord[];
   }, []);
 
   useEffect(() => {
@@ -189,6 +222,45 @@ export default function QcPage() {
     setChecklist(record.checklist_data || {});
   }
 
+  async function handleCreateQc(grId: string) {
+    if (!grId) return;
+    setBusyId(grId);
+    setError(null);
+    try {
+      const supabase = createClient();
+      const { data, error: rpcError } = await supabase.rpc("create_qc_from_receiving", {
+        p_receiving_id: grId,
+      });
+      if (rpcError) throw rpcError;
+      const newQcId = Array.isArray(data) ? data[0] : data;
+      if (newQcId) {
+        setNotice("QC berhasil dibuat. Silakan isi checklist dan simpan.");
+        if (organizationId) await loadQc(organizationId);
+        setSelectedRecord({
+          id: newQcId as string,
+          qc_number: "",
+          receiving_id: grId,
+          status: "PENDING",
+          result: null,
+          inspected_at: null,
+          notes: null,
+          created_at: new Date().toISOString(),
+          checklist_data: null,
+          evidence_photos: null,
+          receiving_records: null,
+        });
+        setFormStatus("ACCEPTED");
+        setFormNotes("");
+        setPhotoUrls([]);
+        setChecklist({});
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Gagal membuat QC.");
+    } finally {
+      setBusyId(null);
+    }
+  }
+
   async function submitDecision(e: FormEvent) {
     e.preventDefault();
     if (!selectedRecord || !organizationId || !userId) return;
@@ -258,6 +330,39 @@ export default function QcPage() {
                 </button>
               );
             })}
+          </div>
+        )}
+
+        {/* GRs that don't have a QC inspection yet */}
+        {grWithoutQc.length > 0 && (
+          <div className="mb-5 rounded-xl border border-amber-200 bg-amber-50 p-4">
+            <div className="mb-3 flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-amber-800">
+                GR Tanpa QC ({grWithoutQc.length})
+              </h3>
+              <span className="text-xs text-amber-600">
+                Buat inspeksi QC untuk GR di bawah ini
+              </span>
+            </div>
+            <div className="space-y-2">
+              {grWithoutQc.slice(0, 5).map((gr) => (
+                <div key={gr.id} className="flex items-center justify-between rounded-lg border border-amber-200 bg-white px-4 py-3">
+                  <div>
+                    <p className="text-sm font-mono font-medium text-ink">{gr.receiving_number}</p>
+                    <p className="text-xs text-slate-500">
+                      {gr.suppliers?.name || "—"} · {formatDate(gr.received_date)}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => void handleCreateQc(gr.id)}
+                    disabled={busyId === gr.id}
+                    className="rounded-lg bg-amber-500 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-amber-600 disabled:opacity-50"
+                  >
+                    {busyId === gr.id ? "..." : "Buat QC"}
+                  </button>
+                </div>
+              ))}
+            </div>
           </div>
         )}
 
