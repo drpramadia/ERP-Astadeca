@@ -12,7 +12,6 @@ async function getDashboardData(organizationId: string) {
   const supabase = await createClient();
 
   const [
-    coldStoragesRes,
     stockByStatusRes,
     pendingApprovalsRes,
     recentMovementsRes,
@@ -20,9 +19,7 @@ async function getDashboardData(organizationId: string) {
     activePurchaseRes,
     activeSalesRes,
     activeDeliveryRes,
-    activeRentalRes,
   ] = await Promise.all([
-    supabase.from("cold_storages").select("id, code, name, capacity_kg, temperature_min_c, temperature_max_c, status").eq("organization_id", organizationId).eq("status", "ACTIVE"),
     supabase.rpc("get_stock_by_status", { p_organization_id: organizationId, p_warehouse_id: null, p_cold_storage_id: null }),
     supabase.from("approval_requests").select("id, status").eq("organization_id", organizationId).eq("status", "PENDING"),
     supabase.from("inventory_movements").select("id, movement_type, quantity_kg, performed_at, products!movements_product_id_fkey(name, sku), batches!movements_batch_id_fkey(batch_number), profiles!movements_performed_by_fkey(full_name)").eq("organization_id", organizationId).order("performed_at", { ascending: false }).limit(8),
@@ -31,10 +28,9 @@ async function getDashboardData(organizationId: string) {
     supabase.from("purchase_orders").select("id").eq("organization_id", organizationId).in("status", ["PENDING_APPROVAL", "SUBMITTED"]),
     supabase.from("sales_orders").select("id").eq("organization_id", organizationId).in("status", ["PENDING_APPROVAL", "SUBMITTED"]),
     supabase.from("delivery_orders").select("id").eq("organization_id", organizationId).eq("status", "IN_TRANSIT"),
-    supabase.from("rental_contracts").select("id").eq("organization_id", organizationId).eq("status", "ACTIVE"),
   ]);
 
-  const failedQuery = [coldStoragesRes, stockByStatusRes, pendingApprovalsRes, recentMovementsRes, expiringSoonRes]
+  const failedQuery = [stockByStatusRes, pendingApprovalsRes, recentMovementsRes, expiringSoonRes]
     .find((result) => result.error);
   if (failedQuery?.error) throw failedQuery.error;
 
@@ -53,22 +49,6 @@ async function getDashboardData(organizationId: string) {
     );
   }
 
-  const coldStorages = (coldStoragesRes.data || []).map((cs) => {
-    const capacityKg = Number(cs.capacity_kg || 0);
-    const occupiedKg = occupiedByColdStorage.get(cs.id) || 0;
-    return {
-      id: cs.id,
-      code: cs.code,
-      name: cs.name,
-      capacity_kg: capacityKg,
-      occupied_kg: occupiedKg,
-      available_kg: capacityKg - occupiedKg,
-      utilization_percentage: capacityKg > 0 ? occupiedKg / capacityKg * 100 : 0,
-      temperature_min_c: cs.temperature_min_c,
-      temperature_max_c: cs.temperature_max_c,
-    };
-  });
-
   const pendingCount = pendingApprovalsRes.data?.length || 0;
   const recentMovements = recentMovementsRes.data || [];
   const stockByStatus = (stockByStatusRes.data || []) as { status: string; total_quantity: number; total_quantity_kg: number }[];
@@ -80,10 +60,8 @@ async function getDashboardData(organizationId: string) {
   const activePurchasing = activePurchaseRes.data?.length || 0;
   const activeSales = activeSalesRes.data?.length || 0;
   const activeDelivery = activeDeliveryRes.data?.length || 0;
-  const activeRental = activeRentalRes.data?.length || 0;
-
   return {
-    coldStorages,
+    coldStorages: [],
     totalStock,
     availableStock,
     quarantineStock,
@@ -95,7 +73,6 @@ async function getDashboardData(organizationId: string) {
     activePurchasing,
     activeSales,
     activeDelivery,
-    activeRental,
   };
 }
 
@@ -223,9 +200,6 @@ export default async function DashboardPage() {
             <Link href="/warehouse" className="text-sm font-medium text-primary hover:underline">Kelola</Link>
           </div>
           <div className="grid gap-4 xl:grid-cols-2">
-            {dashboardData.coldStorages.length > 0 ? dashboardData.coldStorages.map((cs: { id: string; code: string; name: string; capacity_kg: number; occupied_kg: number; available_kg: number; utilization_percentage: number; temperature_min_c?: number; temperature_max_c?: number }) => <ColdStorageCard key={cs.id} coldStorage={cs} />) : (
-              <div className="col-span-2 rounded-2xl border border-dashed border-line bg-white p-12 text-center"><p className="text-sm text-slate-500">Belum ada cold storage yang dikonfigurasi.</p><Link href="/warehouse" className="mt-2 inline-block text-sm font-medium text-primary hover:underline">Tambahkan cold storage</Link></div>
-            )}
           </div>
         </section>
         <div className="mt-8 grid gap-6 lg:grid-cols-2">

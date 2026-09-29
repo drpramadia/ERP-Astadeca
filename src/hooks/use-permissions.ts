@@ -76,6 +76,8 @@ export interface SessionState {
   isDirector: boolean;
   /** True once the first resolution attempt finished, success or not. */
   loaded: boolean;
+  /** "operational" | "rental" | "dual" | null — determined by permissions */
+  systemType: "operational" | "rental" | "dual" | null;
 }
 
 const INITIAL: SessionState = {
@@ -91,6 +93,7 @@ const INITIAL: SessionState = {
   isSuperUser: false,
   isDirector: false,
   loaded: false,
+  systemType: null,
 };
 
 export function useSession() {
@@ -167,6 +170,18 @@ export function useSession() {
       isSuperUser: systemRole === "SUPER_USER",
       isDirector: systemRole === "DIRECTOR",
       loaded: true,
+      systemType: (() => {
+        const hasRental = codes.some(c => c.startsWith("rental."));
+        const hasOper  = codes.some(c =>
+          c.startsWith("inventory.") || c.startsWith("purchase.") ||
+          c.startsWith("sales.")    || c.startsWith("finance.")  ||
+          c === "operational.view"
+        );
+        if (hasRental && hasOper) return "dual";
+        if (hasRental) return "rental";
+        if (hasOper) return "operational";
+        return null;
+      })(),
     });
   }, []);
 

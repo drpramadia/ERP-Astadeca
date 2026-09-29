@@ -304,15 +304,23 @@ function NotificationBell() {
  * Permission codes are defined in DB (role_permissions table).
  * If a code doesn't exist in the DB, the item is visible to everyone.
  */
-export const NAV_GROUPS = [
+export type NavSystem = "operational" | "rental" | "all";
+
+export const NAV_GROUPS: Array<{
+  label: string;
+  systems: NavSystem[];
+  items: Array<{ label: string; href: string; icon: React.ComponentType<{ className?: string }>; permission: string }>;
+}> = [
   {
     label: "Ringkasan",
+    systems: ["all"],
     items: [
       { label: "Dashboard", href: "/dashboard", icon: HouseIcon, permission: "dashboard.view" },
     ],
   },
   {
     label: "Operasional",
+    systems: ["operational", "all"],
     items: [
       { label: "Pembelian", href: "/supply-chain/purchasing", icon: ReceiptIcon, permission: "purchase.view" },
       { label: "Penerimaan", href: "/supply-chain/receiving", icon: PackageIcon, permission: "inventory.receive" },
@@ -327,6 +335,7 @@ export const NAV_GROUPS = [
   },
   {
     label: "Cold Storage",
+    systems: ["rental", "all"],
     items: [
       { label: "Penyewaan", href: "/rental", icon: GaugeIcon, permission: "rental.view" },
       { label: "Kontrak", href: "/rental/contracts", icon: FileIcon, permission: "rental.view" },
@@ -337,6 +346,7 @@ export const NAV_GROUPS = [
   },
   {
     label: "Keuangan",
+    systems: ["all"],
     items: [
       { label: "Piutang", href: "/finance/receivables", icon: ReceiptIcon, permission: "finance.view" },
       { label: "Hutang", href: "/finance/payables", icon: FileIcon, permission: "finance.view" },
@@ -345,6 +355,7 @@ export const NAV_GROUPS = [
   },
   {
     label: "Manajemen",
+    systems: ["all"],
     items: [
       { label: "Persetujuan", href: "/approval", icon: ShieldIcon, permission: "approval.approve" },
       { label: "Dokumen", href: "/documents", icon: FileIcon, permission: "documents.view" },
@@ -354,6 +365,7 @@ export const NAV_GROUPS = [
   },
   {
     label: "Sistem",
+    systems: ["all"],
     items: [
       { label: "Pengguna & Hak Akses", href: "/settings/users", icon: ShieldIcon, permission: "admin.users" },
       { label: "Pengaturan", href: "/settings", icon: GaugeIcon, permission: "admin.settings" },
@@ -398,7 +410,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const router = useRouter();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const { userId, loaded, permissions, isSuperUser, isDirector, name, email, organizationName, roleName } = useSession();
+  const { userId, loaded, permissions, isSuperUser, isDirector, name, email, organizationName, roleName, systemType } = useSession();
 
   const canSee = (perm: string | undefined) => {
     if (!perm) return true;
@@ -406,7 +418,14 @@ export function AppShell({ children }: { children: ReactNode }) {
     return permissions.has(perm as Parameters<typeof permissions.has>[0]);
   };
 
+  const navSystems: NavSystem[] = systemType === "rental"
+    ? ["rental"]
+    : systemType === "operational"
+      ? ["operational"]
+      : ["all"];
+
   const visibleGroups = NAV_GROUPS
+    .filter((g) => g.systems.some((s) => navSystems.includes(s)))
     .map((g) => ({ ...g, items: g.items.filter((i) => canSee(i.permission)) }))
     .filter((g) => g.items.length > 0);
 
