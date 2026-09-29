@@ -57,7 +57,7 @@ interface Customer {
 interface Unit {
   id: string;
   name: string;
-  symbol: string;
+  code: string;
 }
 
 interface Quotation {
@@ -142,8 +142,8 @@ export default function SalesPage() {
           .order("quotation_date", { ascending: false })
           .limit(50),
         supabase.from("products").select("id, name, sku").eq("organization_id", orgId).order("name"),
-        supabase.from("customers").select("id, name, code").eq("organization_id", orgId).order("name"),
-        supabase.from("units").select("id, name, symbol").eq("organization_id", orgId).order("name"),
+        supabase.from("customers").select("id, name, code").eq("active", true).order("name"),
+        supabase.from("units").select("id, code, name").eq("active", true).order("name"),
       ]);
 
       setOrders(ordersRes.data || []);
@@ -160,7 +160,7 @@ export default function SalesPage() {
     event.preventDefault();
     setQuotationError("");
     if (!quotationForm.customer_id) { setQuotationError("Pilih customer."); return; }
-    if (!quotationItems.some(i => i.product_id && i.quantity && i.unit_id && i.unit_price)) {
+    if (!quotationItems.some(i => i.product_id && i.quantity)) {
       setQuotationError("Tambahkan minimal satu item."); return;
     }
 
@@ -552,7 +552,7 @@ export default function SalesPage() {
                           onChange={e => { const next = [...quotationItems]; next[idx].unit_id = e.target.value; setQuotationItems(next); }}
                         >
                           <option value="">Pilih</option>
-                          {units.map(u => <option key={u.id} value={u.id}>{u.symbol} · {u.name}</option>)}
+                          {units.map(u => <option key={u.id} value={u.id}>{u.code} · {u.name}</option>)}
                         </select>
                       </td>
                       <td className="px-3 py-2">
@@ -713,7 +713,7 @@ export default function SalesPage() {
                           onChange={e => { const next = [...soItems]; next[idx].unit_id = e.target.value; setSoItems(next); }}
                         >
                           <option value="">Pilih</option>
-                          {units.map(u => <option key={u.id} value={u.id}>{u.symbol} · {u.name}</option>)}
+                          {units.map(u => <option key={u.id} value={u.id}>{u.code} · {u.name}</option>)}
                         </select>
                       </td>
                       <td className="px-3 py-2">

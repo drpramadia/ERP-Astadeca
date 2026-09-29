@@ -453,14 +453,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                 </div>
               </div>
             )}
-            <button
-              type="button"
-              onClick={() => setSidebarCollapsed((v) => !v)}
-              title={sidebarCollapsed ? "Perbesar sidebar" : "Perkecil sidebar"}
-              className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-slate-300 transition-colors hover:bg-white/10 hover:text-white ${!sidebarCollapsed ? "ml-auto" : ""}`}
-            >
-              <span className={`transition-transform duration-200 ${sidebarCollapsed ? "rotate-180" : ""}`}>&#9664;</span>
-            </button>
+
           </div>
           {!sidebarCollapsed && (
             <div className="border-b border-white/[0.07] px-5 py-4">
