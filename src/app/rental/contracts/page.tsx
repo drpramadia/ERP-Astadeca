@@ -143,6 +143,26 @@ export default function RentalContractsPage() {
     loadContracts(memb.organization_id);
   }
 
+  async function handleSubmit(contract: RentalContract) {
+    setIsSaving(true);
+    setError(null);
+    const supabase = createClient();
+    const { data: claims } = await supabase.auth.getClaims();
+    const userId = (claims?.claims as { sub?: string })?.sub;
+    if (!userId) { setIsSaving(false); setError("Sesi tidak valid."); return; }
+    const { error: err } = await supabase.rpc("submit_rental_contract", {
+      p_contract_id: contract.id,
+      p_performed_by: userId,
+    });
+    setIsSaving(false);
+    if (err) { setError("Gagal submit kontrak: " + err.message); return; }
+    setMessage(`${contract.contract_number} dikirim untuk approval Director.`);
+    const { data: memb2 } = await supabase
+      .from("organization_memberships").select("organization_id")
+      .eq("user_id", userId).eq("is_active", true).maybeSingle();
+    if (memb2) loadContracts(memb2.organization_id);
+  }
+
   return (
     <AppShell>
       <div className="mx-auto max-w-5xl">
@@ -200,9 +220,17 @@ export default function RentalContractsPage() {
                       </StatusBadge>
                     </td>
                     <td className="px-4 py-3">
-                      <Link href={`/rental/contracts/${c.id}`} className="text-xs text-primary hover:underline font-medium">
-                        Detail →
-                      </Link>
+                      <div className="flex items-center gap-2">
+                        <Link href={`/rental/contracts/${c.id}`} className="text-xs text-primary hover:underline font-medium">
+                          Detail →
+                        </Link>
+                        {c.status === "DRAFT" && canManage && (
+                          <button type="button" onClick={() => void handleSubmit(c)} disabled={isSaving}
+                            className="text-xs font-medium text-primary hover:underline disabled:opacity-50">
+                            Submit
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 );

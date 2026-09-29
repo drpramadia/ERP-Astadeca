@@ -89,12 +89,18 @@ export default function ContractDetailPage() {
     if (!confirm(`Yakin ingin ${decision === "approve" ? "menyetujui" : "menolak"} kontrak ini?`)) return;
     setIsDeciding(true);
     const supabase = createClient();
+    const { data: claims } = await supabase.auth.getClaims();
+    const userId = (claims?.claims as { sub?: string })?.sub;
     const { error: err } = await supabase.rpc("decide_approval_request", {
       p_approval_request_id: (contract as any).approval_request_id,
-      p_decision: decision,
+      p_action: decision === "approve" ? "APPROVE" : "REJECT",
+      p_comment: decision === "approve" ? "Disetujui." : "Ditolak.",
+      p_actor_user_id: userId,
     });
     setIsDeciding(false);
-    if (!err) {
+    if (err) {
+      setError(err.message);
+    } else {
       router.refresh();
       window.location.reload();
     }
@@ -102,10 +108,21 @@ export default function ContractDetailPage() {
 
   async function activate() {
     if (!confirm("Aktifkan kontrak ini? Setelah diaktifkan, kontrak tidak dapat diubah.")) return;
+    setIsDeciding(true);
     const supabase = createClient();
-    await supabase.from("rental_contracts").update({ status: "ACTIVE" }).eq("id", contractId);
-    router.refresh();
-    window.location.reload();
+    const { data: claims } = await supabase.auth.getClaims();
+    const userId = (claims?.claims as { sub?: string })?.sub;
+    const { error: err } = await supabase.rpc("activate_rental_contract", {
+      p_contract_id: contractId,
+      p_performed_by: userId,
+    });
+    setIsDeciding(false);
+    if (err) {
+      setError(err.message);
+    } else {
+      router.refresh();
+      window.location.reload();
+    }
   }
 
   const freqLabel: Record<string, string> = {
