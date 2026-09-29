@@ -42,12 +42,13 @@ export default function PurchasingPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [suppliers, setSuppliers] = useState<any[]>([]);
   const [products, setProducts] = useState<any[]>([]);
+  const [units, setUnits] = useState<any[]>([]);
   const [showCreatePO, setShowCreatePO] = useState(false);
   const [showCreatePR, setShowCreatePR] = useState(false);
   const [poForm, setPoForm] = useState({ supplierId: "", orderDate: new Date().toISOString().split("T")[0], expectedDate: "", notes: "" });
-  const [poLines, setPoLines] = useState<any[]>([{ productId: "", quantity: "", unitPrice: "" }]);
+  const [poLines, setPoLines] = useState<any[]>([{ productId: "", quantity: "", unitId: "", unitPrice: "" }]);
   const [prForm, setPrForm] = useState({ supplierId: "", requestDate: new Date().toISOString().split("T")[0], neededDate: "", notes: "" });
-  const [prLines, setPrLines] = useState<any[]>([{ productId: "", quantity: "" }]);
+  const [prLines, setPrLines] = useState<any[]>([{ productId: "", quantity: "", unitId: "" }]);
   const [saving, setSaving] = useState(false);
   const [orgId, setOrgId] = useState<string>("");
   const [userId, setUserId] = useState<string>("");
@@ -90,12 +91,14 @@ export default function PurchasingPage() {
       setUserId(claims.sub);
 
       // Load suppliers and products
-      const [suppliersRes, productsRes] = await Promise.all([
+      const [suppliersRes, productsRes, unitsRes] = await Promise.all([
         supabase.from("suppliers").select("id, code, name").eq("organization_id", membership.organization_id).order("name"),
         supabase.from("products").select("id, sku, name, unit_id").eq("organization_id", membership.organization_id).order("name"),
+        supabase.from("units").select("id, code, name").eq("active", true).order("code"),
       ]);
       setSuppliers((suppliersRes as any)?.data || []);
       setProducts((productsRes as any)?.data || []);
+      setUnits((unitsRes as any)?.data || []);
       setIsLoading(false);
     }
     init();
@@ -117,11 +120,11 @@ export default function PurchasingPage() {
     setSaving(true);
     try {
       const supabase = createClient();
-      const items = poLines.filter(l => l.productId && l.quantity && l.unitPrice).map(l => ({
+      const items = poLines.filter(l => l.productId && l.quantity).map(l => ({
         product_id: l.productId,
         quantity: parseFloat(l.quantity),
-        unit_id: l.productId ? (products.find((p: any) => p.id === l.productId)?.unit_id || null) : null,
-        unit_price: parseFloat(l.unitPrice),
+        unit_id: l.unitId || null,
+        unit_price: parseFloat(l.unitPrice) || null,
         notes: "",
       }));
       const { error } = await supabase.rpc("create_po_draft", {
@@ -131,12 +134,12 @@ export default function PurchasingPage() {
         p_expected_date: poForm.expectedDate || null,
         p_items: JSON.stringify(items),
         p_notes: poForm.notes,
-        p_created_by: userId,
+        p_requester_id: userId,
       } as Record<string, unknown>);
       if (error) throw error;
       setShowCreatePO(false);
       setPoForm({ supplierId: "", orderDate: new Date().toISOString().split("T")[0], expectedDate: "", notes: "" });
-      setPoLines([{ productId: "", quantity: "", unitPrice: "" }]);
+      setPoLines([{ productId: "", quantity: "", unitId: "", unitPrice: "" }]);
       window.location.reload();
     } catch (e: any) {
       alert("Gagal membuat PO: " + (e?.message || e));
@@ -182,6 +185,7 @@ export default function PurchasingPage() {
       const items = prLines.filter(l => l.productId && l.quantity).map(l => ({
         product_id: l.productId,
         quantity: parseFloat(l.quantity),
+        unit_id: l.unitId || null,
         notes: "",
       }));
       const { error } = await supabase.rpc("create_pr_draft", {
@@ -203,14 +207,14 @@ export default function PurchasingPage() {
     }
   }
 
-  function addPOLine() { setPoLines([...poLines, { productId: "", quantity: "", unitPrice: "" }]); }
+  function addPOLine() { setPoLines([...poLines, { productId: "", quantity: "", unitId: "", unitPrice: "" }]); }
   function removePOLine(i: number) { setPoLines(poLines.filter((_, idx) => idx !== i)); }
   function updatePOLine(i: number, field: string, val: string) {
     const updated = [...poLines];
     (updated[i] as any)[field] = val;
     setPoLines(updated);
   }
-  function addPRLine() { setPrLines([...prLines, { productId: "", quantity: "" }]); }
+  function addPRLine() { setPrLines([...prLines, { productId: "", quantity: "", unitId: "" }]); }
   function removePRLine(i: number) { setPrLines(prLines.filter((_, idx) => idx !== i)); }
   function updatePRLine(i: number, field: string, val: string) {
     const updated = [...prLines];
@@ -418,7 +422,7 @@ export default function PurchasingPage() {
                     value={poForm.orderDate} onChange={e => setPoForm({...poForm, orderDate: e.target.value})} />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Tgl预期送达</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Tgl. Perkiraan Terima</label>
                   <input type="date" className="w-full rounded-lg border border-line px-3 py-2 text-sm"
                     value={poForm.expectedDate} onChange={e => setPoForm({...poForm, expectedDate: e.target.value})} />
                 </div>
@@ -439,6 +443,7 @@ export default function PurchasingPage() {
                       <tr className="bg-slate-50 border-b border-line">
                         <th className="px-2 py-2 text-left font-medium text-slate-600">Produk</th>
                         <th className="px-2 py-2 text-right font-medium text-slate-600 w-24">Qty</th>
+                        <th className="px-2 py-2 text-left font-medium text-slate-600 w-20">Satuan</th>
                         <th className="px-2 py-2 text-right font-medium text-slate-600 w-32">Harga</th>
                         <th className="px-2 py-2 w-8"></th>
                       </tr>
@@ -453,8 +458,9 @@ export default function PurchasingPage() {
                               {products.map((p: any) => <option key={p.id} value={p.id}>{p.name} ({p.sku})</option>)}
                             </select>
                           </td>
-                          <td className="p-1"><input type="number" className="w-full rounded border border-line px-2 py-1 text-right" value={line.quantity} onChange={e => updatePOLine(i, "quantity", e.target.value)} placeholder="0" min="0" step="0.001" /></td>
-                          <td className="p-1"><input type="number" className="w-full rounded border border-line px-2 py-1 text-right" value={line.unitPrice} onChange={e => updatePOLine(i, "unitPrice", e.target.value)} placeholder="0" min="0" step="100" /></td>
+                          <td className="p-1"><input type="text" className="w-full rounded border border-line px-2 py-1 text-right" value={line.quantity} onChange={e => updatePOLine(i, "quantity", e.target.value)} placeholder="0" pattern="[0-9.,]*" /></td>
+                          <td className="p-1"><select className="w-full rounded border border-line bg-white px-2 py-1 text-xs" value={line.unitId || ""} onChange={e => updatePOLine(i, "unitId", e.target.value)}><option value="">-</option>{units.map(u => <option key={u.id} value={u.id}>{u.code}</option>)}</select></td>
+                          <td className="p-1"><input type="text" className="w-full rounded border border-line px-2 py-1 text-right" value={line.unitPrice} onChange={e => updatePOLine(i, "unitPrice", e.target.value)} placeholder="0" pattern="[0-9.,]*" /></td>
                           <td className="p-1 text-center">
                             {poLines.length > 1 && <button onClick={() => removePOLine(i)} className="text-red-400 hover:text-red-600 text-sm">x</button>}
                           </td>
@@ -519,6 +525,7 @@ export default function PurchasingPage() {
                       <tr className="bg-slate-50 border-b border-line">
                         <th className="px-2 py-2 text-left font-medium text-slate-600">Produk</th>
                         <th className="px-2 py-2 text-right font-medium text-slate-600 w-32">Qty</th>
+                        <th className="px-2 py-2 text-left font-medium text-slate-600 w-20">Satuan</th>
                         <th className="px-2 py-2 w-8"></th>
                       </tr>
                     </thead>
@@ -532,7 +539,8 @@ export default function PurchasingPage() {
                               {products.map((p: any) => <option key={p.id} value={p.id}>{p.name} ({p.sku})</option>)}
                             </select>
                           </td>
-                          <td className="p-1"><input type="number" className="w-full rounded border border-line px-2 py-1 text-right" value={line.quantity} onChange={e => updatePRLine(i, "quantity", e.target.value)} placeholder="0" min="0" step="0.001" /></td>
+                          <td className="p-1"><input type="text" className="w-full rounded border border-line px-2 py-1 text-right" value={line.quantity} onChange={e => updatePRLine(i, "quantity", e.target.value)} placeholder="0" pattern="[0-9.,]*" /></td>
+                          <td className="p-1"><select className="w-full rounded border border-line bg-white px-2 py-1 text-xs" value={line.unitId || ""} onChange={e => updatePRLine(i, "unitId", e.target.value)}><option value="">-</option>{units.map(u => <option key={u.id} value={u.id}>{u.code}</option>)}</select></td>
                           <td className="p-1 text-center">
                             {prLines.length > 1 && <button onClick={() => removePRLine(i)} className="text-red-400 hover:text-red-600 text-sm">x</button>}
                           </td>
