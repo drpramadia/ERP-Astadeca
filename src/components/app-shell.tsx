@@ -331,7 +331,7 @@ export const NAV_GROUPS = [
       { label: "Penyewaan", href: "/rental", icon: GaugeIcon, permission: "rental.view" },
       { label: "Kontrak", href: "/rental/contracts", icon: FileIcon, permission: "rental.view" },
       { label: "Penerimaan Barang", href: "/rental/receiving", icon: PackageIcon, permission: "rental.view" },
-      { label: "Pelepasan Barang", href: "/rental/release", icon: TruckIcon, permission: "rental.release" },
+      { label: "Pelepasan Barang", href: "/rental/release", icon: TruckIcon, permission: "rental.manage" },
       { label: "Penagihan", href: "/rental/billing", icon: ReceiptIcon, permission: "rental.billing" },
     ],
   },
