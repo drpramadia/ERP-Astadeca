@@ -22,7 +22,7 @@ interface ContractOption {
   contract_number: string;
   title: string;
   customer_id: string;
-  customers: { name: string } | null;
+  rc_customer_fk?: { name: string } | { name: string }[];
 }
 
 interface AllocationRow {
@@ -107,7 +107,7 @@ export default function RentalReleasePage() {
       const supabase = createClient();
       const { data, error: err } = await supabase
         .from("rental_contracts")
-        .select("id, contract_number, title, customer_id, customers(name)")
+        .select("id, contract_number, title, customer_id, rc_customer_fk(name)")
         .eq("organization_id", organizationId)
         .eq("status", "ACTIVE")
         .order("contract_number");
@@ -336,7 +336,7 @@ export default function RentalReleasePage() {
                 { value: "", label: "\u2014 Pilih kontrak \u2014" },
                 ...contracts.map((c) => ({
                   value: c.id,
-                  label: `${c.contract_number} \u00b7 ${c.title} (${c.customers?.name ?? "\u2212"})`,
+                  label: `${c.contract_number} · ${c.title} (${Array.isArray(c.rc_customer_fk) ? c.rc_customer_fk[0]?.name : c.rc_customer_fk?.name ?? "−"})`,
                 })),
               ]}
               value={selectedContractId}
