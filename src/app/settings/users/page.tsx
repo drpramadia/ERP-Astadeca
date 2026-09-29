@@ -138,7 +138,7 @@ function SectionHeader({
 export default function UsersPage() {
   const session = useSession();
   const router = useRouter();
-  const { userId, isSuperUser, organizationId, loaded, name } = session;
+  const { userId, isSuperUser, organizationId, loaded, name, systemType } = session;
 
   /* ── User list ── */
   const [users, setUsers] = useState<EnrichedUser[]>([]);
@@ -387,7 +387,14 @@ export default function UsersPage() {
   }, [loaded, userId, router]);
 
   /* ── Assignable roles (exclude SYSTEM) ── */
-  const assignableRoles = roles.filter((r) => r.code !== "SYSTEM");
+  const assignableRoles = roles.filter((r) => {
+    if (r.code === "SYSTEM") return false;
+    // operational users can only assign operational roles
+    if (systemType === "operational") return ["WAREHOUSE","QC","PURCHASING","SALES","FINANCE","DELIVERY"].includes(r.code);
+    // rental users can only assign rental roles
+    if (systemType === "rental") return ["WAREHOUSE","QC"].includes(r.code);
+    return true; // dual / super user can assign any
+  });
 
   const activeCount = users.filter((u) => u.isActive).length;
 

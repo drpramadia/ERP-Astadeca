@@ -53,9 +53,13 @@ export default function RolesPage() {
           .select("system_role")
           .eq("id", userId)
           .single();
+        // Allow SUPER_USER or ADMIN/DIRECTOR with admin.users permission
         const profileData = profile as unknown as { system_role: string | null } | null;
-        if (profileData?.system_role !== "SUPER_USER") {
-          throw new Error("Akses ditolak. Hanya Super User yang dapat mengakses halaman ini.");
+        const { data: permResult } = await supabase.rpc("get_my_permissions");
+        const permCodes: string[] = ((permResult as unknown as { permission_code: string }[]) ?? []).map(r => r.permission_code);
+        const hasAdminUsers = permCodes.includes("admin.users");
+        if (profileData?.system_role !== "SUPER_USER" && !hasAdminUsers) {
+          throw new Error("Akses ditolak. Hanya Super User atau Admin dengan hak pengguna yang dapat mengakses halaman ini.");
         }
 
         const [rolesResult, permissionsResult, rolePermsResult] = await Promise.all([
