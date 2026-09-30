@@ -305,7 +305,7 @@ export default function DocumentDetailPage({ params }: { params: Promise<{ id: s
                   <td className="p-2 font-mono text-xs">{line.sku || "-"}</td>
                   <td className="p-2 font-mono text-xs">{line.batch_number || "-"}</td>
                   <td className="p-2 text-right">
-                    {line.quantity ? `${line.quantity.toLocaleString("id-ID")} ${line.unit_code || ""} : "-"}
+                    {line.quantity ? `${line.quantity.toLocaleString("id-ID")} ${line.unit_code || ""}` : "-"}
                   </td>
                   <td className="p-2 text-right">
                     {line.unit_price ? formatCurrency(line.unit_price) : "-"}

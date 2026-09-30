@@ -184,19 +184,6 @@ export default function PurchasingPage() {
     }
   }
 
-  async function handleSubmitPO(poId: string) {
-    setActingId(poId);
-    setActionType("submit");
-    try {
-      const supabase = createClient();
-      const { error } = await supabase.rpc("submit_po", { p_po_id: poId, p_submitted_by: userId } as Record<string, unknown>);
-      if (error) throw error;
-      window.location.reload();
-    } catch (e: any) {
-      alert("Gagal submit: " + (e?.message || e));
-      setActingId(null);
-    }
-  }
 
   async function handleCancelPO(poId: string) {
     if (!confirm("Batalkan PO ini?")) return;
@@ -284,7 +271,7 @@ export default function PurchasingPage() {
               activeTab === "orders"
                 ? "border-b-2 border-primary text-primary"
                 : "text-slate-500 hover:text-ink"
-            }}
+            }`}
           >
             Purchase Orders
           </button>
@@ -294,7 +281,7 @@ export default function PurchasingPage() {
               activeTab === "requests"
                 ? "border-b-2 border-primary text-primary"
                 : "text-slate-500 hover:text-ink"
-            }}
+            }`}
           >
             Purchase Requests
           </button>
@@ -594,7 +581,7 @@ export default function PurchasingPage() {
               </button>
             </div>
           </div>
-        )}
+        </div>
       )}
 
       {/* PO Detail Modal */}

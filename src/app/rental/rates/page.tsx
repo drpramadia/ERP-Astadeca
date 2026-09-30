@@ -190,7 +190,7 @@ export default function RentalRatesPage() {
     setStorageLocations(
       (sl.data ?? []).map((r) => ({
         value: r.id,
-        label: `${r.code} — ${r.name},
+        label: `${r.code} — ${r.name}`,
         coldStorageId: r.cold_storage_id,
       }))
     );
@@ -623,7 +623,7 @@ export default function RentalRatesPage() {
                           <button
                             type="button"
                             onClick={() => canWrite ? openEdit(rate) : undefined}
-                            className={`rounded-lg p-1.5 transition-colors ${canWrite ? "text-slate-400 hover:bg-slate-100 hover:text-primary cursor-pointer" : "text-slate-200 cursor-default"}}
+                            className={`rounded-lg p-1.5 transition-colors ${canWrite ? "text-slate-400 hover:bg-slate-100 hover:text-primary cursor-pointer" : "text-slate-200 cursor-default"}`}
                             title={canWrite ? "Edit" : "Tidak ada izin"}
                           >
                             <Pencil className="h-4 w-4" />
@@ -631,7 +631,7 @@ export default function RentalRatesPage() {
                           <button
                             type="button"
                             onClick={() => canWrite ? setDeleteTarget(rate) : undefined}
-                            className={`rounded-lg p-1.5 transition-colors ${canWrite ? "text-slate-400 hover:bg-red-50 hover:text-danger cursor-pointer" : "text-slate-200 cursor-default"}}
+                            className={`rounded-lg p-1.5 transition-colors ${canWrite ? "text-slate-400 hover:bg-red-50 hover:text-danger cursor-pointer" : "text-slate-200 cursor-default"}`}
                             title={canWrite ? "Nonaktifkan" : "Tidak ada izin"}
                           >
                             <Trash2 className="h-4 w-4" />

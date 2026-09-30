@@ -222,7 +222,7 @@ export default function DeliveryPage() {
           <div className={`mb-4 rounded-lg border px-4 py-3 text-sm ${actionMessage.type === "success"
               ? "border-emerald-200 bg-emerald-50 text-emerald-700"
               : "border-red-200 bg-red-50 text-red-700"
-            }}>
+            }`}>
             {actionMessage.text}
           </div>
         )}
@@ -267,7 +267,7 @@ export default function DeliveryPage() {
                     return (
                       <tr key={delivery.id} className="hover:bg-slate-50 transition-colors">
                         <td className="px-4 py-3 text-sm font-mono font-medium text-ink">{delivery.do_number}</td>
-                        <td className="px-4 py-3 text-sm text-ink">{delivery.sales_orders?.so_number || "-"}</td>
+                        <td className="px-4 py-3 text-sm text-ink">{delivery.sales_orders?.order_number || "-"}</td>
                         <td className="px-4 py-3">
                           <p className="text-sm font-medium text-ink">{delivery.do_customer_fk?.name || "−"}</p>
                           <p className="text-xs text-slate-500">{delivery.do_customer_fk?.code || "−"}</p>
@@ -352,7 +352,7 @@ export default function DeliveryPage() {
             <div className={`rounded-lg border px-3 py-2 text-sm ${actionMessage.type === "success"
                 ? "border-emerald-200 bg-emerald-50 text-emerald-700"
                 : "border-red-200 bg-red-50 text-red-700"
-              }}>
+              }`}>
               {actionMessage.text}
             </div>
           )}
@@ -392,7 +392,7 @@ export default function DeliveryPage() {
               </div>
               <div>
                 <p className="text-xs text-slate-500">Sales Order</p>
-                <p className="font-medium text-ink">{selectedDelivery.sales_orders?.so_number || "-"}</p>
+                <p className="font-medium text-ink">{selectedDelivery.sales_orders?.order_number || "-"}</p>
               </div>
               <div>
                 <p className="text-xs text-slate-500">Jadwal</p>

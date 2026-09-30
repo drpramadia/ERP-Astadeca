@@ -24,14 +24,14 @@ export function useOrganization() {
       try {
         const supabase = createClient();
         const { data: claimsData } = await supabase.auth.getSession();
-        const claims = sessionData?.session?.user;
+        const claims = claimsData?.session?.user;
         
         if (!claims) {
           setResult({ organization: null, membership: null, isLoading: false, error: null });
           return;
         }
 
-        const userId = claims.sub;
+        const userId = claims.id;
         const { data: membership } = await supabase
           .from("organization_memberships")
           .select("organization_id, role_id")

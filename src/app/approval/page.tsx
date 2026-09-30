@@ -147,7 +147,7 @@ export default function ApprovalPage() {
                 <div className="mt-4 grid gap-3 sm:grid-cols-[1fr_auto]">
                   <Textarea
                     rows={2}
-                    aria-label={`Komentar untuk ${request.title}}
+                    aria-label={`Komentar untuk ${request.title}`}
                     placeholder="Komentar untuk penolakan atau permintaan revisi"
                     value={comments[request.id] || ""}
                     onChange={(event) => setComments((current) => ({ ...current, [request.id]: event.target.value }))}

@@ -141,7 +141,7 @@ function MovementRow({ movement }: { movement: RecentMovement }) {
   return (
     <div className="flex items-center justify-between py-3 border-b border-line last:border-0">
       <div className="flex items-center gap-3 min-w-0">
-        <span className={`shrink-0 rounded-full px-2 py-1 text-[10px] font-medium ${colorClass}}>{typeLabels[movement.movement_type] || movement.movement_type}</span>
+        <span className={`shrink-0 rounded-full px-2 py-1 text-[10px] font-medium ${colorClass}`}>{typeLabels[movement.movement_type] || movement.movement_type}</span>
         <div className="min-w-0">
           <p className="text-sm font-medium text-ink truncate">{movement.products?.name || "Produk tidak ditemukan"}</p>
           <p className="text-xs text-slate-500">Batch: {movement.batches?.batch_number || "-"} - {formatNumber(movement.quantity_kg)} KG</p>
@@ -221,7 +221,7 @@ export default async function DashboardPage() {
               {dashboardData.stockByStatus.length > 0 ? (
                 <div className="space-y-3">{dashboardData.stockByStatus.map((status: { status: string; total_quantity: number; total_quantity_kg: number }) => (
                   <div key={status.status} className="flex items-center justify-between py-2 border-b border-line last:border-0">
-                    <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${getBadgeTone(status.status) === "success" ? "bg-emerald-50 text-emerald-700" : getBadgeTone(status.status) === "warning" ? "bg-amber-50 text-amber-700" : "bg-slate-100 text-slate-700"}}>{status.status}</span>
+                    <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${getBadgeTone(status.status) === "success" ? "bg-emerald-50 text-emerald-700" : getBadgeTone(status.status) === "warning" ? "bg-amber-50 text-amber-700" : "bg-slate-100 text-slate-700"}`}>{status.status}</span>
                     <div className="text-right"><p className="text-sm font-semibold text-ink">{formatNumber(Number(status.total_quantity_kg || 0))} KG</p><p className="text-[10px] text-slate-500">{formatNumber(Number(status.total_quantity || 0))} batch</p></div>
                   </div>
                 ))}</div>

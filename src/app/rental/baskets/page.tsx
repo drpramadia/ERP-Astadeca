@@ -90,7 +90,7 @@ function BasketCell({ basket, onClick }: { basket: Basket; onClick?: () => void 
           <div
             className={`h-full rounded-full transition-all ${
               status === "OCCUPIED" ? "bg-emerald-500" : status === "RESERVED" ? "bg-amber-500" : "bg-slate-400"
-            }}
+            }`}
             style={{ width: `${Math.min(pct, 100)}%` }}
           />
         </div>
@@ -222,7 +222,7 @@ export default function BasketsPage() {
               onChange={(e) => setSelectedCS(e.target.value)}
               options={coldStorages.map((cs) => ({
                 value: cs.id,
-                label: `${cs.code} — ${cs.name},
+                label: `${cs.code} — ${cs.name}`,
               }))}
             />
           </div>
@@ -301,7 +301,7 @@ function StatBadge({ label, value, color }: { label: string; value: string | num
     amber: "bg-amber-100 text-amber-700 border-amber-200",
   };
   return (
-    <div className={`flex flex-col items-center rounded-xl border px-4 py-2 text-center ${colors[color]}}>
+    <div className={`flex flex-col items-center rounded-xl border px-4 py-2 text-center ${colors[color]}`}>
       <span className="text-xs font-medium text-current opacity-60">{label}</span>
       <span className="text-sm font-bold">{value}</span>
     </div>

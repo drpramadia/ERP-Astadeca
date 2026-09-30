@@ -53,7 +53,7 @@ export async function createDocumentFromPurchaseOrder(params: CreateDocumentFrom
   const lines: Omit<DocumentLine, 'id' | 'document_id' | 'created_at' | 'line_number'>[] = [];
   
   for (const item of po.items || []) {
-    const subtotal = (Number(item.quantity)) * Number(item.unit_price || 0)) * 
+    const subtotal = (Number(item.quantity) * Number(item.unit_price || 0)) * 
       (1 - Number(item.discount_percentage || 0) / 100);
     
     lines.push({
@@ -176,7 +176,7 @@ export async function createDocumentFromSalesOrder(params: CreateDocumentFromSOP
   const lines: Omit<DocumentLine, 'id' | 'document_id' | 'created_at' | 'line_number'>[] = [];
   
   for (const item of so.items || []) {
-    const subtotal = (Number(item.quantity)) * Number(item.unit_price || 0)) * 
+    const subtotal = (Number(item.quantity) * Number(item.unit_price || 0)) * 
       (1 - Number(item.discount_percentage || 0) / 100);
     
     lines.push({

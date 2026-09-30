@@ -46,7 +46,7 @@ export async function proxy(request: NextRequest) {
    */
   const { data } = await supabase.auth.getSession();
 
-  const claims = data?.claims ?? null;
+  const claims = data?.session?.user ?? null;
 
   const pathname = request.nextUrl.pathname;
 

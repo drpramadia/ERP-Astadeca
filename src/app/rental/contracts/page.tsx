@@ -201,7 +201,7 @@ export default function RentalContractsPage() {
                 return (
                   <tr key={c.id} className="border-b border-line last:border-0 hover:bg-slate-50 transition-colors">
                     <td className="px-4 py-3">
-                      <Link href={`/rental/contracts/${c.id}} className="font-mono text-xs text-primary hover:underline font-medium">
+                      <Link href={`/rental/contracts/${c.id}`} className="font-mono text-xs text-primary hover:underline font-medium">
                         {c.contract_number}
                       </Link>
                     </td>
@@ -222,7 +222,7 @@ export default function RentalContractsPage() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
-                        <Link href={`/rental/contracts/${c.id}} className="text-xs text-primary hover:underline font-medium">
+                        <Link href={`/rental/contracts/${c.id}`} className="text-xs text-primary hover:underline font-medium">
                           Detail →
                         </Link>
                         {c.status === "DRAFT" && canManage && (

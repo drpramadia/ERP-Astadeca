@@ -132,16 +132,14 @@ export default function QcPage() {
 
     // Filter GRs that have no QC inspection
     const qcReceivingIds = new Set(
-      ((qcRes.data || []) as QcRecord[]).map(r => r.receiving_id).filter(Boolean)
+      ((qcRes.data || []) as unknown as QcRecord[]).map(r => r.receiving_id).filter(Boolean)
     );
-    const withoutQC = ((grRes.data || []) as ReceivingGR[]).filter(
+    const withoutQC = ((grRes.data || []) as unknown as ReceivingGR[]).filter(
       gr => gr.id && !qcReceivingIds.has(gr.id)
     );
 
-    if (!cancelled) {
-      setQc((qcRes.data || []) as unknown as QcRecord[]);
-      setGrWithoutQc(withoutQC);
-    }
+    setQc((qcRes.data || []) as unknown as QcRecord[]);
+    setGrWithoutQc(withoutQC);
     return (qcRes.data || []) as unknown as QcRecord[];
   }, []);
 
@@ -196,7 +194,7 @@ export default function QcPage() {
     const uploaded: string[] = [];
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
-      const path = `${organizationId}/${Date.now()}-${file.name};
+      const path = `${organizationId}/${Date.now()}-${file.name}`;
       const { data, error } = await supabase.storage
         .from("qc-evidence")
         .upload(path, file, { upsert: false });
@@ -313,7 +311,7 @@ export default function QcPage() {
           <div className="mb-5 flex flex-wrap gap-3">
             <button
               onClick={() => setStatusFilter("")}
-              className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${statusFilter === "" ? "border-primary bg-primary/10 text-primary" : "border-line bg-white text-slate-600 hover:border-slate-300"}}
+              className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${statusFilter === "" ? "border-primary bg-primary/10 text-primary" : "border-line bg-white text-slate-600 hover:border-slate-300"}`}
             >
               Semua ({qc.length})
             </button>
@@ -324,7 +322,7 @@ export default function QcPage() {
                 <button
                   key={status}
                   onClick={() => setStatusFilter(statusFilter === status ? "" : status)}
-                  className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${statusFilter === status ? "border-primary bg-primary/10 text-primary" : toneClass}}
+                  className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${statusFilter === status ? "border-primary bg-primary/10 text-primary" : toneClass}`}
                 >
                   {info.label} ({count})
                 </button>
@@ -418,7 +416,7 @@ export default function QcPage() {
                         ) : (
                           <div className="space-y-0.5">
                             {items.map((item, index) => (
-                              <div key={`${record.id}-${index}}>
+                              <div key={`${record.id}-${index}`}>
                                 <span className="text-ink">{item.products?.name || "—"}</span>
                                 {item.batch_number ? (
                                   <span className="ml-2 font-mono text-xs text-slate-400">{item.batch_number}</span>
@@ -492,7 +490,7 @@ export default function QcPage() {
       <Modal
         isOpen={!!selectedRecord}
         onClose={() => { setSelectedRecord(null); setPhotoUrls([]); }}
-        title={`QC ${selectedRecord?.qc_number || ""}}
+        title={`QC ${selectedRecord?.qc_number || ""}`}
         description="Isi checklist kondisi barang dan lampirkan foto evidence."
         size="xl"
       >
@@ -611,7 +609,7 @@ export default function QcPage() {
                     <div key={idx} className="relative group">
                       <img
                         src={url}
-                        alt={`Evidence ${idx + 1}}
+                        alt={`Evidence ${idx + 1}`}
                         className="h-24 w-full rounded-lg border border-line object-cover"
                       />
                       <button

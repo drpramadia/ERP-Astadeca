@@ -163,7 +163,7 @@ function NotificationBell() {
 
     async function init() {
       const { data: claimsData } = await supabase.auth.getSession();
-      const userId = sessionData?.session?.user?.id;
+      const userId = claimsData?.session?.user?.id;
       if (!userId || cancelled) return;
 
       await loadNotifications(userId);

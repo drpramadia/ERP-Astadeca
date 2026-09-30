@@ -63,7 +63,7 @@ export function FinanceClient({ view }: { view: FinanceView }) {
       <div className="mx-auto max-w-7xl">
         <PageHeader eyebrow="KEUANGAN" title={viewTitle} description="Supply-chain revenue dan rental revenue dipisahkan berdasarkan domain transaksi." />
         <nav aria-label="Modul keuangan" className="mb-5 flex gap-5 overflow-x-auto border-b border-line">
-          {[["receivables", "Piutang"], ["payables", "Hutang"], ["payments", "Pembayaran"]].map(([href, label]) => <Link key={href} href={`/finance/${href}} aria-current={view === href ? "page" : undefined} className={`whitespace-nowrap border-b-2 px-1 pb-3 text-sm font-medium ${view === href ? "border-primary text-primary" : "border-transparent text-slate-500 hover:text-ink"}}>{label}</Link>)}
+          {[["receivables", "Piutang"], ["payables", "Hutang"], ["payments", "Pembayaran"]].map(([href, label]) => <Link key={href} href={`/finance/${href}`} aria-current={view === href ? "page" : undefined} className={`whitespace-nowrap border-b-2 px-1 pb-3 text-sm font-medium ${view === href ? "border-primary text-primary" : "border-transparent text-slate-500 hover:text-ink"}`}>{label}</Link>)}
         </nav>
         {view === "receivables" ? (
           <>

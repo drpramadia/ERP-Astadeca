@@ -88,7 +88,7 @@ export default function PurchaseOrderPrintPage({ params }: Props) {
     <div className="min-h-screen bg-slate-100 py-8">
       <div className="fixed top-4 right-4 flex gap-2 z-50">
         <button onClick={() => window.print()} className="bg-ink text-white px-4 py-2 rounded-lg shadow-lg">🖨️ Print</button>
-        <Link href={`/documents/${document.id}} className="bg-white text-ink px-4 py-2 rounded-lg shadow-lg">← Kembali</Link>
+        <Link href={`/documents/${document.id}`} className="bg-white text-ink px-4 py-2 rounded-lg shadow-lg">← Kembali</Link>
       </div>
 
       <div className="mx-auto bg-white shadow-2xl" style={{ width: "210mm", minHeight: "297mm" }}>

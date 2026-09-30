@@ -149,7 +149,7 @@ export default function PickingPage() {
     setMessage(null);
     try {
       const supabase = createClient();
-      const referenceNumber = `PICK-${Date.now()};
+      const referenceNumber = `PICK-${Date.now()}`;
       const { data, error: pickingError } = await supabase.rpc("issue_inventory_fefo", {
         p_organization_id: organizationId,
         p_product_id: productId,
@@ -164,7 +164,7 @@ export default function PickingPage() {
       if (pickingError) throw pickingError;
       const result = data?.[0];
       if (!result?.success) throw new Error(result?.message || "Picking tidak berhasil.");
-      setMessage(`${formatNumber(Number(result.total_issued))} ${products.find((product) => product.id === productId)?.units?.code || "unit"} dipilih dengan FEFO. Ref: ${referenceNumber});
+      setMessage(`${formatNumber(Number(result.total_issued))} ${products.find((product) => product.id === productId)?.units?.code || "unit"} dipilih dengan FEFO. Ref: ${referenceNumber}`);
       setLines([]);
     } catch (pickingError) {
       setError(pickingError instanceof Error ? pickingError.message : "Gagal menyimpan picking.");

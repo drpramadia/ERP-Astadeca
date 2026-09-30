@@ -144,7 +144,7 @@ export default function InventoryPage() {
             className="w-64"
           />
           <Select
-            options={[{ value: "", label: "Semua Cold Storage" }, ...coldStorages.map(cs => ({ value: cs.id, label: `${cs.code} - ${cs.name} }))]}
+            options={[{ value: "", label: "Semua Cold Storage" }, ...coldStorages.map(cs => ({ value: cs.id, label: `${cs.code} - ${cs.name}` }))]}
             value={filters.coldStorageId}
             onChange={(e) => setFilters(f => ({ ...f, coldStorageId: e.target.value }))}
             className="w-48"
@@ -223,14 +223,14 @@ export default function InventoryPage() {
                         <td className="px-4 py-3 text-right">
                           <p className="text-sm text-ink">
                             {item.cost_price || item.batches?.cost_price || item.products?.purchase_price
-                              ? `Rp ${formatNumber(Number(item.cost_price || item.batches?.cost_price || item.products?.purchase_price || 0))}
+                              ? `Rp ${formatNumber(Number(item.cost_price || item.batches?.cost_price || item.products?.purchase_price || 0))}`
                               : "-"}
                           </p>
                         </td>
                         <td className="px-4 py-3 text-right">
                           <p className="text-sm text-ink">
                             {item.selling_price || item.products?.selling_price
-                              ? `Rp ${formatNumber(Number(item.selling_price || item.products?.selling_price || 0))}
+                              ? `Rp ${formatNumber(Number(item.selling_price || item.products?.selling_price || 0))}`
                               : "-"}
                           </p>
                         </td>
@@ -241,14 +241,14 @@ export default function InventoryPage() {
                             const margin = sell - cost;
                             const pct = cost > 0 ? ((margin / cost) * 100).toFixed(1) : "0";
                             return (
-                              <p className={`text-sm font-semibold ${margin >= 0 ? "text-success" : "text-danger"}}>
+                              <p className={`text-sm font-semibold ${margin >= 0 ? "text-success" : "text-danger"}`}>
                                 {cost > 0 ? `Rp ${formatNumber(margin)} (${pct}%)` : "-"}
                               </p>
                             );
                           })()}
                         </td>
                         <td className="px-4 py-3 text-center">
-                          <span className={`text-xs font-medium ${expiryTone === "danger" ? "text-danger" : expiryTone === "warning" ? "text-warning" : "text-slate-500"}}>
+                          <span className={`text-xs font-medium ${expiryTone === "danger" ? "text-danger" : expiryTone === "warning" ? "text-warning" : "text-slate-500"}`}>
                             {item.batches?.expiry_date ? formatDate(item.batches.expiry_date) : "-"}
                           </span>
                         </td>

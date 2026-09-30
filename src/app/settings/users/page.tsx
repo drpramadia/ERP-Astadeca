@@ -87,7 +87,7 @@ function ToastContainer({
                 : toast.tone === "danger"
                   ? "border-rose-200 bg-rose-50 text-rose-800"
                   : "border-blue-200 bg-blue-50 text-blue-800"
-            }}
+            }`}
           >
             <span className="flex-1">{toast.message}</span>
             <button
@@ -534,7 +534,7 @@ export default function UsersPage() {
                   placeholder="Pilih peran..."
                   options={assignableRoles.map((r) => ({
                     value: r.id,
-                    label: `${r.code} \u2014 ${r.name},
+                    label: `${r.code} \u2014 ${r.name}`,
                   }))}
                   value={invRoleId}
                   onChange={(e) => setInvRoleId(e.target.value)}
@@ -764,7 +764,7 @@ export default function UsersPage() {
                                             pendingRoleId === r.id
                                               ? "bg-primary/10 text-primary font-semibold"
                                               : "hover:bg-slate-100 text-slate-600"
-                                          }}
+                                          }`}
                                         >
                                           {r.code} \u2014 {r.name}
                                         </button>

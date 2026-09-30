@@ -166,7 +166,7 @@ export default function MovementsPage() {
                     <tr key={m.id} className="hover:bg-slate-50 transition-colors">
                       <td className="px-4 py-3 text-sm font-mono text-ink">{m.movement_number}</td>
                       <td className="px-4 py-3 text-center">
-                        <span className={`inline-flex rounded-full border px-2 py-1 text-[10px] font-semibold ${typeColors[m.movement_type] || "bg-slate-100 text-slate-700"}}>
+                        <span className={`inline-flex rounded-full border px-2 py-1 text-[10px] font-semibold ${typeColors[m.movement_type] || "bg-slate-100 text-slate-700"}`}>
                           {typeLabels[m.movement_type] || m.movement_type}
                         </span>
                       </td>

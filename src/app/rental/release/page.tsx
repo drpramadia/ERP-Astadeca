@@ -254,14 +254,14 @@ export default function RentalReleasePage() {
 
     for (const payload of payloads) {
       const { data, error: rpcErr } = await supabase.rpc("release_rental_stock", payload);
-      if (rpcErr) { errors.push(`${payload.allocation_id}: ${rpcErr.message}); continue; }
+      if (rpcErr) { errors.push(`${payload.allocation_id}: ${rpcErr.message}`); continue; }
       const result = data?.[0];
-      if (!result?.success) { errors.push(`${payload.allocation_id}: ${result?.message ?? "Gagal."}); continue; }
+      if (!result?.success) { errors.push(`${payload.allocation_id}: ${result?.message ?? "Gagal."}`); continue; }
       results.push(payload.allocation_id);
     }
 
     if (errors.length > 0) {
-      setError(`Gagal melepas ${errors.length} item: ${errors.join("; ")});
+      setError(`Gagal melepas ${errors.length} item: ${errors.join("; ")}`);
     }
     if (results.length > 0) {
       setSuccess(`${results.length} item berhasil dilepas.`);
@@ -393,13 +393,13 @@ export default function RentalReleasePage() {
                               item.selected
                                 ? "bg-blue-50"
                                 : "hover:bg-slate-50"
-                            }}
+                            }`}
                           >
                             <td className="px-4 py-3 text-center">
                               <Checkbox
                                 checked={item.selected}
                                 onChange={() => toggleItem(item.allocationId)}
-                                aria-label={`Pilih ${item.allocationNumber}}
+                                aria-label={`Pilih ${item.allocationNumber}`}
                               />
                             </td>
                             <td className="px-4 py-3">
