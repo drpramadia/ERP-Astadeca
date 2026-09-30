@@ -149,7 +149,7 @@ export default function DocumentDetailPage({ params }: { params: Promise<{ id: s
     <AppShell>
       <PageHeader
         title={document.title}
-        description={`Dokumen ${DOCUMENT_TYPE_LABELS[document.document_type as keyof typeof DOCUMENT_TYPE_LABELS] || document.document_type}}
+        description={`Dokumen ${DOCUMENT_TYPE_LABELS[document.document_type as keyof typeof DOCUMENT_TYPE_LABELS] || document.document_type}`}
         actions={
           <div className="flex gap-2">
             <Link href={`/documents/${document.id}/print`}>

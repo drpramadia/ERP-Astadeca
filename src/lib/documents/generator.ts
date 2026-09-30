@@ -283,7 +283,7 @@ export async function createDocumentFromDeliveryOrder(params: CreateDocumentFrom
     p_customer_id: delivery.customer_id,
     p_reference_number: delivery.sales_order?.so_number,
     p_reference_type: 'SO',
-    p_notes: `Delivery Order: ${delivery.do_number}\\nKendaraan: ${delivery.vehicle_number || '-'}, Driver: ${delivery.driver_name || '-'}`,
+    p_notes: `Delivery Order: ${delivery.do_number}\nKendaraan: ${delivery.vehicle_number || '-'}, Driver: ${delivery.driver_name || '-'}`,
     p_created_by: createdBy,
     p_document_lines: JSON.stringify(lines),
   });

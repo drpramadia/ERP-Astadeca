@@ -115,7 +115,7 @@ export default function SuratJalanPrintPage({ params }: Props) {
           🖨️ Print
         </button>
         <Link
-          href={`/documents/${document.id}
+          href={`/documents/${document.id}`}
           className="bg-white text-ink px-4 py-2 rounded-lg shadow-lg hover:bg-slate-50 transition-colors"
         >
           ← Kembali

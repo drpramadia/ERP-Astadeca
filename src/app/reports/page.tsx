@@ -107,7 +107,7 @@ export default function ReportsPage() {
         .flatMap(([k, v]) => {
           if (v !== null && typeof v === "object" && !Array.isArray(v)) {
             return Object.entries(v as Record<string, unknown>).map(
-              ([nk]) => `${k}.${nk}
+              ([nk]) => `${k}.${nk}`
             );
           }
           return [k];

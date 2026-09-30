@@ -30,7 +30,7 @@ interface DeliveryOrder {
   created_by?: string;
   created_at: string;
   // embedded relations (use FK name to avoid ambiguity)
-  delivery_orders_customer_fk?: { name: string; code: string };
+  do_customer_fk?: { name: string; code: string };
   sales_orders?: { order_number: string };
 }
 
@@ -269,8 +269,8 @@ export default function DeliveryPage() {
                         <td className="px-4 py-3 text-sm font-mono font-medium text-ink">{delivery.do_number}</td>
                         <td className="px-4 py-3 text-sm text-ink">{delivery.sales_orders?.order_number || "-"}</td>
                         <td className="px-4 py-3">
-                          <p className="text-sm font-medium text-ink">{delivery.delivery_orders_customer_fk?.name || "−"}</p>
-                          <p className="text-xs text-slate-500">{delivery.delivery_orders_customer_fk?.code || "−"}</p>
+                          <p className="text-sm font-medium text-ink">{delivery.do_customer_fk?.name || "−"}</p>
+                          <p className="text-xs text-slate-500">{delivery.do_customer_fk?.code || "−"}</p>
                         </td>
                         <td className="px-4 py-3 text-sm text-ink">
                           {delivery.delivery_date ? formatDate(delivery.delivery_date) : "−"}
@@ -387,8 +387,8 @@ export default function DeliveryPage() {
               </div>
               <div>
                 <p className="text-xs text-slate-500">Customer</p>
-                <p className="font-medium text-ink">{selectedDelivery.delivery_orders_customer_fk?.name || "−"}</p>
-                <p className="text-xs text-slate-500">{selectedDelivery.delivery_orders_customer_fk?.code || ""}</p>
+                <p className="font-medium text-ink">{selectedDelivery.do_customer_fk?.name || "−"}</p>
+                <p className="text-xs text-slate-500">{selectedDelivery.do_customer_fk?.code || ""}</p>
               </div>
               <div>
                 <p className="text-xs text-slate-500">Sales Order</p>
