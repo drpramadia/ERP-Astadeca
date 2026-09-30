@@ -481,8 +481,10 @@ export function AppShell({ children }: { children: ReactNode }) {
     if (!isFieldAllowedPath) {
       // Field worker landed on an admin route via SPA nav — server
       // middleware may not run for client-side navigations, so bounce here.
+      if (typeof window !== "undefined") console.log("[FieldGuard] redirecting", { pathname, isFieldAllowedPath, roleCode });
       return <FieldRedirect />;
     }
+    if (typeof window !== "undefined") console.log("[FieldGuard] allowed", { pathname, isFieldAllowedPath, roleCode });
     const title =
       pathname.includes("/qc") ? "QC Inspection" :
       pathname.includes("/receiving") ? "Penerimaan Barang" :
