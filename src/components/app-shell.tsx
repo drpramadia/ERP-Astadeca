@@ -408,18 +408,6 @@ function SidebarLink({
   );
 }
 
-function FieldRedirect() {
-  const router = useRouter();
-  useEffect(() => {
-    router.replace("/field");
-  }, [router]);
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-50">
-      <div className="h-8 w-8 animate-spin rounded-full border-3 border-amber-300 border-t-amber-600" />
-    </div>
-  );
-}
-
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -474,17 +462,9 @@ export function AppShell({ children }: { children: ReactNode }) {
   const initials = (name || email || "Pengguna").split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0]).join("").toUpperCase();
 
   // Mobile field shell short-circuits the full admin layout entirely.
-  const isFieldAllowedPath = ["/field", "/supply-chain/receiving", "/supply-chain/qc", "/supply-chain/delivery"]
-    .some((p) => pathname === p || pathname.startsWith(`${p}/`));
-
+  // Note: we intentionally NOT redirect from allowed field paths (receiving/qc/delivery)
+  // here — FieldShell renders normally for those routes.
   if (loaded && isFieldRole) {
-    if (!isFieldAllowedPath) {
-      // Field worker landed on an admin route via SPA nav — server
-      // middleware may not run for client-side navigations, so bounce here.
-      if (typeof window !== "undefined") console.log("[FieldGuard] redirecting", { pathname, isFieldAllowedPath, roleCode });
-      return <FieldRedirect />;
-    }
-    if (typeof window !== "undefined") console.log("[FieldGuard] allowed", { pathname, isFieldAllowedPath, roleCode });
     const title =
       pathname.includes("/qc") ? "QC Inspection" :
       pathname.includes("/receiving") ? "Penerimaan Barang" :
