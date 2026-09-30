@@ -369,7 +369,7 @@ export default function DeliveryPage() {
       <Modal
         isOpen={showDetailModal}
         onClose={() => setShowDetailModal(false)}
-        title={selectedDelivery ? `Detail: ${selectedDelivery.do_number} : "Detail Delivery Order"}
+        title={selectedDelivery ? `Detail: ${selectedDelivery.do_number}` : "Detail Delivery Order"}
         size="lg"
       >
         {selectedDelivery && (
