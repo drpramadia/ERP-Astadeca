@@ -15,7 +15,7 @@ const workflows = [
 
 export default async function SupplyChainPage() {
   const supabase = await createClient();
-  const { data: claimsData } = await supabase.auth.getSession();
+  const { data: sessionData } = await supabase.auth.getSession();
   if (!sessionData?.session?.user) redirect("/login");
 
   return (

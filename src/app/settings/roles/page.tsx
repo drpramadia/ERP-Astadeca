@@ -44,7 +44,7 @@ export default function RolesPage() {
         const supabase = createClient();
 
         // Check system role first
-        const { data: claimsData } = await supabase.auth.getSession();
+        const { data: sessionData } = await supabase.auth.getSession();
         const userId = sessionData?.session?.user?.id;
         if (!userId) throw new Error("Silakan login untuk mengakses manajemen peran.");
 

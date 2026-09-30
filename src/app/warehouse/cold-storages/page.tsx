@@ -102,7 +102,7 @@ export default function ColdStoragesPage() {
   useEffect(() => {
     async function init() {
       const supabase = createClient();
-      const { data: claimsData } = await supabase.auth.getSession();
+      const { data: sessionData } = await supabase.auth.getSession();
       const orgId = (sessionData?.session?.user as { org_id?: string })?.org_id;
       if (!orgId) {
         const { data: m } = await supabase

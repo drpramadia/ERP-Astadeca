@@ -40,14 +40,14 @@ export default function DocumentCenterPage() {
   useEffect(() => {
     async function init() {
       const supabase = createClient();
-      const { data: claimsData } = await supabase.auth.getSession();
-      const claims = sessionData?.session?.user;
+      const { data: sessionData } = await supabase.auth.getSession();
+      const user = sessionData?.session?.user;
       if (!claims) return;
 
       const { data: membership } = await supabase
         .from("organization_memberships")
         .select("organization_id")
-        .eq("user_id", claims.sub)
+        .eq("user_id", user.id)
         .eq("is_active", true)
         .maybeSingle();
 

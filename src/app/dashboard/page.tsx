@@ -157,10 +157,10 @@ function MovementRow({ movement }: { movement: RecentMovement }) {
 
 export default async function DashboardPage() {
   const supabase = await createClient();
-  const { data: claimsData } = await supabase.auth.getSession();
+  const { data: sessionData } = await supabase.auth.getSession();
   const claims = sessionData?.session?.user ?? null;
   if (!claims) { redirect("/login"); }
-  const userId = claims.sub;
+  const userId = user.id;
   const { data: profile } = await supabase.from("profiles").select("full_name").eq("id", userId).maybeSingle();
   const { data: membership } = await supabase.from("organization_memberships").select("organization_id, role_id").eq("user_id", userId).eq("is_active", true).maybeSingle();
   if (!membership) {

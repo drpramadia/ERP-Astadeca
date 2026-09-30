@@ -69,13 +69,13 @@ export default function BillingPage() {
     if (!loaded || !userId) return;
     async function init() {
       const supabase = createClient();
-      const { data: claimsData } = await supabase.auth.getSession();
-      const claims = sessionData?.session?.user;
+      const { data: sessionData } = await supabase.auth.getSession();
+      const user = sessionData?.session?.user;
       if (!claims) return;
       const { data: membership } = await supabase
         .from("organization_memberships")
         .select("organization_id")
-        .eq("user_id", claims.sub)
+        .eq("user_id", user.id)
         .eq("is_active", true)
         .maybeSingle();
       if (!membership) return;
@@ -128,15 +128,15 @@ export default function BillingPage() {
     setError(null);
     try {
       const supabase = createClient();
-      const { data: claimsData } = await supabase.auth.getSession();
-      const claims = sessionData?.session?.user;
-      if (!claims) throw new Error("Not authenticated");
+      const { data: sessionData } = await supabase.auth.getSession();
+      const user = sessionData?.session?.user;
+      if (!user) throw new Error("Not authenticated");
 
       // Get org_id
       const { data: membership } = await supabase
         .from("organization_memberships")
         .select("organization_id")
-        .eq("user_id", claims.sub)
+        .eq("user_id", user.id)
         .eq("is_active", true)
         .maybeSingle();
       if (!membership) throw new Error("Tidak ada keanggotaan organisasi aktif.");
@@ -160,7 +160,7 @@ export default function BillingPage() {
         status: "DRAFT",
         due_date: form.dueDate || null,
         notes: form.notes || null,
-        created_by: claims.sub,
+        created_by: user.id,
       });
       if (insertError) throw insertError;
 

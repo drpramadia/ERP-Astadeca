@@ -115,14 +115,14 @@ export default function SalesPage() {
   useEffect(() => {
     async function init() {
       const supabase = createClient();
-      const { data: claimsData } = await supabase.auth.getSession();
-      const claims = sessionData?.session?.user;
+      const { data: sessionData } = await supabase.auth.getSession();
+      const user = sessionData?.session?.user;
       if (!claims) return;
 
       const { data: membership } = await supabase
         .from("organization_memberships")
         .select("organization_id")
-        .eq("user_id", claims.sub)
+        .eq("user_id", user.id)
         .eq("is_active", true)
         .maybeSingle();
 
@@ -165,9 +165,9 @@ export default function SalesPage() {
     setIsSavingQuotation(true);
     try {
       const supabase = createClient();
-      const { data: claimsData } = await supabase.auth.getSession();
-      const claims = sessionData?.session?.user;
-      if (!claims) throw new Error("Not authenticated");
+      const { data: sessionData } = await supabase.auth.getSession();
+      const user = sessionData?.session?.user;
+      if (!user) throw new Error("Not authenticated");
 
       const validItems = quotationItems.filter(i => i.product_id && i.quantity && i.unit_id && i.unit_price);
       const subtotal = validItems.reduce((sum, i) => sum + (parseFloat(i.quantity) || 0) * (parseFloat(i.unit_price) || 0), 0);
@@ -189,7 +189,7 @@ export default function SalesPage() {
         total_amount: subtotal,
         validity_days: 14,
         notes: quotationForm.notes || null,
-        created_by: claims.sub,
+        created_by: user.id,
       };
 
       const { data: qtData, error: qtErr } = await supabase.from("quotations").insert(insertData).select("id").single();
@@ -235,9 +235,9 @@ export default function SalesPage() {
     setIsSavingSO(true);
     try {
       const supabase = createClient();
-      const { data: claimsData } = await supabase.auth.getSession();
-      const claims = sessionData?.session?.user;
-      if (!claims) throw new Error("Not authenticated");
+      const { data: sessionData } = await supabase.auth.getSession();
+      const user = sessionData?.session?.user;
+      if (!user) throw new Error("Not authenticated");
 
       const validItems = soItems.filter(i => i.product_id && i.quantity && i.unit_id && i.unit_price);
       const subtotal = validItems.reduce((sum, i) => sum + (parseFloat(i.quantity) || 0) * (parseFloat(i.unit_price) || 0), 0);
@@ -259,7 +259,7 @@ export default function SalesPage() {
         total_amount: subtotal,
         payment_terms_days: 0,
         notes: soForm.notes || null,
-        created_by: claims.sub,
+        created_by: user.id,
       };
 
       const { data: soData, error: soErr } = await supabase.from("sales_orders").insert(insertData).select("id").single();

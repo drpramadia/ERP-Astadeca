@@ -62,7 +62,7 @@ function NavCard({ title, description, href, icon: Icon, badge }: { title: strin
 
 export default async function WarehousePage() {
   const supabase = await createClient();
-  const { data: claimsData } = await supabase.auth.getSession();
+  const { data: sessionData } = await supabase.auth.getSession();
   const claims = sessionData?.session?.user ?? null;
 
   if (!claims) {
