@@ -7,7 +7,6 @@ import { useEffect, useState } from "react";
 import type { ComponentType, ReactNode } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useSession } from "@/hooks/use-permissions";
-import { FieldShell } from "@/components/field-shell";
 
 type IconProps = {
   className?: string;
@@ -415,9 +414,8 @@ export function AppShell({ children }: { children: ReactNode }) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const { userId, loaded, permissions, isSuperUser, isDirector, name, email, organizationName, roleName, roleCode, systemType } = useSession();
 
-  // Field workers (WAREHOUSE, QC) get a dedicated mobile-first shell —
-  // no admin sidebar, no dashboard, only their operational flows.
-  const isFieldRole = roleCode === "WAREHOUSE" || roleCode === "QC";
+  // Field workers (WAREHOUSE, QC) see a filtered sidebar — no admin/finance
+  // sections — but stay in the same AppShell layout. (See navSystems/visibleGroups below.)
 
   const canSee = (perm: string | undefined) => {
     if (!perm) return true;
@@ -461,18 +459,8 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   const initials = (name || email || "Pengguna").split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0]).join("").toUpperCase();
 
-  // Mobile field shell short-circuits the full admin layout entirely.
-  // Note: we intentionally NOT redirect from allowed field paths (receiving/qc/delivery)
-  // here — FieldShell renders normally for those routes.
-  if (loaded && isFieldRole) {
-    const title =
-      pathname.includes("/qc") ? "QC Inspection" :
-      pathname.includes("/receiving") ? "Penerimaan Barang" :
-      pathname.includes("/delivery") ? "Pengiriman" :
-      "Menu Utama";
-    return <FieldShell title={title} roleName={roleName}>{children}</FieldShell>;
-  }
-
+  // Field workers always go through AppShell (sidebar layout).
+  // FieldShell is reserved exclusively for /field.
   return (
       <div className="min-h-screen bg-canvas text-ink">
       <div className="flex min-h-screen">
