@@ -80,6 +80,7 @@ export function FieldShell({
         <div className="flex items-center justify-around gap-1">
           <Link
             href="/field"
+            prefetch={false}
             className={`flex flex-1 flex-col items-center gap-0.5 py-1 ${pathname === "/field" ? "text-amber-600" : "text-slate-400"}`}
           >
             <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -90,6 +91,7 @@ export function FieldShell({
 
           <Link
             href="/supply-chain/receiving"
+            prefetch={false}
             className={`flex flex-1 flex-col items-center gap-0.5 py-1 ${pathname.includes("/receiving") ? "text-amber-600" : "text-slate-400"}`}
           >
             <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -100,6 +102,7 @@ export function FieldShell({
 
           <Link
             href="/supply-chain/qc"
+            prefetch={false}
             className={`flex flex-1 flex-col items-center gap-0.5 py-1 ${pathname.includes("/qc") ? "text-amber-600" : "text-slate-400"}`}
           >
             <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -110,6 +113,7 @@ export function FieldShell({
 
           <Link
             href="/supply-chain/delivery"
+            prefetch={false}
             className={`flex flex-1 flex-col items-center gap-0.5 py-1 ${pathname.includes("/delivery") ? "text-amber-600" : "text-slate-400"}`}
           >
             <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
