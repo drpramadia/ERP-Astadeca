@@ -96,7 +96,7 @@ export default function DocumentDetailPage({ params }: { params: Promise<{ id: s
     if (newStatus === "ISSUED") {
       const { data: sessionData } = await supabase.auth.getSession();
       const user = sessionData?.session?.user;
-      if (claims) {
+      if (user) {
         updateData.issued_at = new Date().toISOString();
         updateData.issued_by = user.id;
       }

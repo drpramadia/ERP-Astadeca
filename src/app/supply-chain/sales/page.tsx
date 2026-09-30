@@ -117,7 +117,7 @@ export default function SalesPage() {
       const supabase = createClient();
       const { data: sessionData } = await supabase.auth.getSession();
       const user = sessionData?.session?.user;
-      if (!claims) return;
+      if (!user) return;
 
       const { data: membership } = await supabase
         .from("organization_memberships")

@@ -147,8 +147,9 @@ export default function RentalContractsPage() {
     setIsSaving(true);
     setError(null);
     const supabase = createClient();
-    const { data: claims } = await supabase.auth.getSession();
-    const userId = (claims?.claims as { sub?: string })?.sub;
+    const { data: sessionData } = await supabase.auth.getSession();
+    const user = sessionData?.session?.user;
+    const userId = user?.id;
     if (!userId) { setIsSaving(false); setError("Sesi tidak valid."); return; }
     const { error: err } = await supabase.rpc("submit_rental_contract", {
       p_contract_id: contract.id,

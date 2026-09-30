@@ -8,9 +8,9 @@ export default async function WarehouseLayout({
 }) {
   const supabase = await createClient();
   const { data: sessionData } = await supabase.auth.getSession();
-  const claims = sessionData?.session?.user ?? null;
+  const user = sessionData?.session?.user ?? null;
 
-  if (!claims) {
+  if (!user) {
     redirect("/login");
   }
 

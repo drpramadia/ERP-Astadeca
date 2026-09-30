@@ -51,7 +51,8 @@ export default function ContractDetailPage() {
   useEffect(() => {
     async function init() {
       const supabase = createClient();
-      const { data: claims } = await supabase.auth.getSession();
+      const { data: sessionData } = await supabase.auth.getSession();
+const user = sessionData?.session?.user;
       const userId = (claims?.claims as { sub?: string })?.sub;
       if (!userId) return;
 
@@ -89,7 +90,8 @@ export default function ContractDetailPage() {
     if (!confirm(`Yakin ingin ${decision === "approve" ? "menyetujui" : "menolak"} kontrak ini?`)) return;
     setIsDeciding(true);
     const supabase = createClient();
-    const { data: claims } = await supabase.auth.getSession();
+    const { data: sessionData } = await supabase.auth.getSession();
+const user = sessionData?.session?.user;
     const userId = (claims?.claims as { sub?: string })?.sub;
     const { error: err } = await supabase.rpc("decide_approval_request", {
       p_approval_request_id: (contract as any).approval_request_id,
@@ -110,7 +112,8 @@ export default function ContractDetailPage() {
     if (!confirm("Aktifkan kontrak ini? Setelah diaktifkan, kontrak tidak dapat diubah.")) return;
     setIsDeciding(true);
     const supabase = createClient();
-    const { data: claims } = await supabase.auth.getSession();
+    const { data: sessionData } = await supabase.auth.getSession();
+const user = sessionData?.session?.user;
     const userId = (claims?.claims as { sub?: string })?.sub;
     const { error: err } = await supabase.rpc("activate_rental_contract", {
       p_contract_id: contractId,
