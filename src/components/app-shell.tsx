@@ -459,9 +459,18 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   const initials = (name || email || "Pengguna").split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0]).join("").toUpperCase();
 
+  // Show spinner while session resolves — prevents wrong shell flash on hard reload.
+  if (!loaded) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-slate-50">
+        <div className="h-8 w-8 animate-spin rounded-full border-3 border-amber-300 border-t-amber-600" />
+      </div>
+    );
+  }
+
   // Field workers always go through AppShell (sidebar layout).
   // FieldShell is reserved exclusively for /field.
-  if (loaded && isFieldRole) {
+  if (isFieldRole) {
     const title =
       pathname.includes("/qc") ? "QC Inspection" :
       pathname.includes("/receiving") ? "Penerimaan Barang" :
