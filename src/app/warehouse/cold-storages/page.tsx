@@ -109,7 +109,7 @@ export default function ColdStoragesPage() {
           .from("organization_memberships")
           .select("organization_id")
           .eq("user_id", (sessionData?.session?.user as { sub?: string })?.sub)
-          .eq("is_active", true)
+          .eq("is_active", "true")
           .maybeSingle();
         setOrganizationId(m?.organization_id ?? null);
       } else {

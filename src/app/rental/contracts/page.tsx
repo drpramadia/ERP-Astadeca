@@ -96,7 +96,7 @@ export default function RentalContractsPage() {
       const supabase = createClient();
       const { data: memb } = await supabase
         .from("organization_memberships").select("organization_id")
-        .eq("user_id", userId).eq("is_active", true).maybeSingle();
+        .eq("user_id", userId).eq("is_active", "true").maybeSingle();
       if (!memb) return;
 
       const [{ data: custData }, { data: permData }] = await Promise.all([
@@ -122,7 +122,7 @@ export default function RentalContractsPage() {
     const supabase = createClient();
     const { data: memb } = await supabase
       .from("organization_memberships").select("organization_id")
-      .eq("user_id", userId).eq("is_active", true).maybeSingle();
+      .eq("user_id", userId).eq("is_active", "true").maybeSingle();
     if (!memb) { setIsSaving(false); return; }
 
     const { error: err } = await supabase.rpc("create_rental_contract", {
@@ -160,7 +160,7 @@ export default function RentalContractsPage() {
     setMessage(`${contract.contract_number} dikirim untuk approval Director.`);
     const { data: memb2 } = await supabase
       .from("organization_memberships").select("organization_id")
-      .eq("user_id", userId).eq("is_active", true).maybeSingle();
+      .eq("user_id", userId).eq("is_active", "true").maybeSingle();
     if (memb2) loadContracts(memb2.organization_id);
   }
 

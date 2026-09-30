@@ -78,7 +78,7 @@ export default function InquiryPage() {
     const { data: memb } = await supabase
       .from("organization_memberships")
       .select("organization_id")
-      .eq("user_id", userId).eq("is_active", true).maybeSingle();
+      .eq("user_id", userId).eq("is_active", "true").maybeSingle();
     if (!memb) return;
 
     setOrgId(memb.organization_id);

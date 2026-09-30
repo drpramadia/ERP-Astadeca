@@ -43,7 +43,7 @@ export default function ApprovalPage() {
           .from("organization_memberships")
           .select("organization_id")
           .eq("user_id", userId)
-          .eq("is_active", true)
+          .eq("is_active", "true")
           .maybeSingle();
         if (membershipError) throw membershipError;
         if (!membership) throw new Error("Akun belum memiliki membership organisasi aktif.");

@@ -35,7 +35,7 @@ export default function LoginPage() {
       .from("organization_memberships")
       .select("role_id")
       .eq("user_id", userId)
-      .eq("is_active", true)
+      .eq("is_active", "true")
       .maybeSingle();
 
     if (!membership?.role_id) { router.push("/login"); return; }

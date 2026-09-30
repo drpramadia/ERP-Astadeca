@@ -183,7 +183,7 @@ export default function ReceivingPage() {
         .from("organization_memberships")
         .select("organization_id")
         .eq("user_id", userId)
-        .eq("is_active", true)
+        .eq("is_active", "true")
         .maybeSingle();
       if (!membership) { setIsLoading(false); return; }
 
@@ -282,7 +282,7 @@ export default function ReceivingPage() {
       // Reload records
       const { data: membership } = await supabase
         .from("organization_memberships").select("organization_id")
-        .eq("user_id", userId).eq("is_active", true).maybeSingle();
+        .eq("user_id", userId).eq("is_active", "true").maybeSingle();
       if (membership) await loadRecords(membership.organization_id);
 
       // Reset form

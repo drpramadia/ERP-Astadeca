@@ -100,7 +100,7 @@ export async function proxy(request: NextRequest) {
           .from("organization_memberships")
           .select("role_id")
           .eq("user_id", sessionData?.session?.user?.id)
-          .eq("is_active", true)
+          .eq("is_active", "true")
           .maybeSingle();
 
         if (membership?.role_id) {

@@ -123,7 +123,7 @@ export default function SalesPage() {
         .from("organization_memberships")
         .select("organization_id")
         .eq("user_id", user.id)
-        .eq("is_active", true)
+        .eq("is_active", "true")
         .maybeSingle();
 
       if (!membership) return;

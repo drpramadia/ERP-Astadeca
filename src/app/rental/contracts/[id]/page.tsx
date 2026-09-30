@@ -59,7 +59,7 @@ const user = sessionData?.session?.user;
       const { data: memb } = await supabase
         .from("organization_memberships")
         .select("organization_id")
-        .eq("user_id", userId).eq("is_active", true).maybeSingle();
+        .eq("user_id", userId).eq("is_active", "true").maybeSingle();
       if (!memb) return;
 
       const [{ data: cData, error: cErr }, { data: aData, error: aErr }] = await Promise.all([

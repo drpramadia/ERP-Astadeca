@@ -39,7 +39,7 @@ export function FinanceClient({ view }: { view: FinanceView }) {
         const { data: sessionData } = await supabase.auth.getSession();
         const userId = sessionData?.session?.user?.id;
         if (!userId) throw new Error("Silakan login untuk membuka piutang.");
-        const { data: membership, error: membershipError } = await supabase.from("organization_memberships").select("organization_id").eq("user_id", userId).eq("is_active", true).maybeSingle();
+        const { data: membership, error: membershipError } = await supabase.from("organization_memberships").select("organization_id").eq("user_id", userId).eq("is_active", "true").maybeSingle();
         if (membershipError) throw membershipError;
         if (!membership) throw new Error("Akun belum memiliki organisasi aktif.");
         const { data, error: invoiceError } = await supabase.from("rental_invoices").select("id, invoice_number, billing_period_start, billing_period_end, issue_date, due_date, total_amount, amount_paid, currency, status, customers(name)").eq("organization_id", membership.organization_id).order("issue_date", { ascending: false }).limit(500);

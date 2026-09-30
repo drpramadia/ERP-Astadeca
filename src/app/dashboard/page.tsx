@@ -162,7 +162,7 @@ export default async function DashboardPage() {
   if (!user) { redirect("/login"); }
   const userId = user.id;
   const { data: profile } = await supabase.from("profiles").select("full_name").eq("id", userId).maybeSingle();
-  const { data: membership } = await supabase.from("organization_memberships").select("organization_id, role_id").eq("user_id", userId).eq("is_active", true).maybeSingle();
+  const { data: membership } = await supabase.from("organization_memberships").select("organization_id, role_id").eq("user_id", userId).eq("is_active", "true").maybeSingle();
   if (!membership) {
     return (<AppShell><div className="mx-auto max-w-2xl rounded-2xl border border-line bg-white p-8 shadow-sm"><h1 className="text-2xl font-semibold text-ink">Akses belum tersedia</h1><p className="mt-3 text-sm text-slate-600">User berhasil login, tetapi belum memiliki membership pada organisasi.</p></div></AppShell>);
   }

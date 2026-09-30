@@ -90,7 +90,7 @@ export default function DeliveryPage() {
         .from("organization_memberships")
         .select("organization_id")
         .eq("user_id", userId)
-        .eq("is_active", true)
+        .eq("is_active", "true")
         .maybeSingle();
 
       if (membership) {
@@ -108,7 +108,7 @@ export default function DeliveryPage() {
       .from("organization_memberships")
       .select("organization_id")
       .eq("user_id", userId)
-      .eq("is_active", true)
+      .eq("is_active", "true")
       .maybeSingle();
     if (membership) await fetchData(membership.organization_id);
   }, [userId, fetchData]);
@@ -132,7 +132,7 @@ export default function DeliveryPage() {
         .from("organization_memberships")
         .select("organization_id")
         .eq("user_id", userId)
-        .eq("is_active", true)
+        .eq("is_active", "true")
         .maybeSingle();
 
       if (!membership) throw new Error("Tidak ditemukan keanggotaan aktif.");

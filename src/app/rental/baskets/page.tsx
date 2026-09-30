@@ -128,7 +128,7 @@ export default function BasketsPage() {
         .from("organization_memberships")
         .select("organization_id")
         .eq("user_id", userId)
-        .eq("is_active", true)
+        .eq("is_active", "true")
         .maybeSingle();
 
       if (!membership) return;

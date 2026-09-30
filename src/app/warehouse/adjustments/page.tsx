@@ -80,7 +80,7 @@ export default function AdjustmentsPage() {
         const { data: sessionData } = await supabase.auth.getSession();
         const userId = sessionData?.session?.user?.id;
         if (!userId) throw new Error("Silakan login untuk mengelola adjustment.");
-        const { data: membership, error: membershipError } = await supabase.from("organization_memberships").select("organization_id").eq("user_id", userId).eq("is_active", true).maybeSingle();
+        const { data: membership, error: membershipError } = await supabase.from("organization_memberships").select("organization_id").eq("user_id", userId).eq("is_active", "true").maybeSingle();
         if (membershipError) throw membershipError;
         if (!membership) throw new Error("Akun belum memiliki organisasi aktif.");
         await load(membership.organization_id, userId);
