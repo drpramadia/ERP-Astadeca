@@ -17,8 +17,10 @@ interface InventoryItem {
   quantity_kg?: number;
   status: string;
   received_at?: string;
-  products: { name: string; sku: string } | null;
-  batches: { batch_number: string; expiry_date?: string } | null;
+  cost_price?: number;
+  selling_price?: number;
+  products: { name: string; sku: string; purchase_price?: number; selling_price?: number } | null;
+  batches: { batch_number: string; expiry_date?: string; cost_price?: number } | null;
   cold_storages: { name: string; code: string } | null;
   storage_locations: { name: string; code: string } | null;
   units: { code: string } | null;
@@ -38,14 +40,14 @@ export default function InventoryPage() {
   useEffect(() => {
     async function init() {
       const supabase = createClient();
-      const { data: claimsData } = await supabase.auth.getSession();
-      const claims = sessionData?.session?.user;
-      if (!claims) return;
+      const { data: sessionData } = await supabase.auth.getSession();
+      const user = sessionData?.session?.user;
+      if (!user) return;
 
       const { data: membership } = await supabase
         .from("organization_memberships")
         .select("organization_id")
-        .eq("user_id", claims.sub)
+        .eq("user_id", user.id)
         .eq("is_active", true)
         .maybeSingle();
 
@@ -85,6 +87,14 @@ export default function InventoryPage() {
 
       const { data } = await query;
       setInventory((data as unknown as InventoryItem[]) || []);
+      
+      // Also fetch inventory levels for pricing summary
+      const { data: levelsData } = await supabase
+        .from("inventory_levels")
+        .select("*, products(purchase_price, selling_price)")
+        .eq("organization_id", organizationId)
+        .eq("owner_type", "COMPANY")
+        .limit(100);
       setIsLoading(false);
     }
     fetchInventory();
@@ -185,6 +195,9 @@ export default function InventoryPage() {
                     <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-600">Batch</th>
                     <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-600">Lokasi</th>
                     <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-600">Jumlah</th>
+                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-600">Harga Beli</th>
+                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-600">Harga Jual</th>
+                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-600">Margin</th>
                     <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider text-slate-600">Expiry</th>
                     <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider text-slate-600">Status</th>
                   </tr>
@@ -206,6 +219,33 @@ export default function InventoryPage() {
                         </td>
                         <td className="px-4 py-3 text-right">
                           <p className="text-sm font-semibold text-ink">{formatNumber(Number(item.quantity_kg || item.quantity || 0))} {item.units?.code || "KG"}</p>
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <p className="text-sm text-ink">
+                            {item.cost_price || item.batches?.cost_price || item.products?.purchase_price
+                              ? `Rp ${formatNumber(Number(item.cost_price || item.batches?.cost_price || item.products?.purchase_price || 0))}`
+                              : "-"}
+                          </p>
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <p className="text-sm text-ink">
+                            {item.selling_price || item.products?.selling_price
+                              ? `Rp ${formatNumber(Number(item.selling_price || item.products?.selling_price || 0))}`
+                              : "-"}
+                          </p>
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          {(() => {
+                            const cost = Number(item.cost_price || item.batches?.cost_price || item.products?.purchase_price || 0);
+                            const sell = Number(item.selling_price || item.products?.selling_price || 0);
+                            const margin = sell - cost;
+                            const pct = cost > 0 ? ((margin / cost) * 100).toFixed(1) : "0";
+                            return (
+                              <p className={`text-sm font-semibold ${margin >= 0 ? "text-success" : "text-danger"}`}>
+                                {cost > 0 ? `Rp ${formatNumber(margin)} (${pct}%)` : "-"}
+                              </p>
+                            );
+                          })()}
                         </td>
                         <td className="px-4 py-3 text-center">
                           <span className={`text-xs font-medium ${expiryTone === "danger" ? "text-danger" : expiryTone === "warning" ? "text-warning" : "text-slate-500"}`}>
