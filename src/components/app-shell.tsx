@@ -453,15 +453,6 @@ export function AppShell({ children }: { children: ReactNode }) {
     if (loaded && !userId) router.replace("/login");
   }, [loaded, userId, router]);
 
-  // Field workers are confined to their allowed flows — any other route
-  // (dashboard, admin pages, master data, ...) bounces back to /field.
-  const FIELD_ALLOWED_PREFIXES = ["/field", "/supply-chain/receiving", "/supply-chain/qc", "/supply-chain/delivery"];
-  useEffect(() => {
-    if (loaded && isFieldRole && !FIELD_ALLOWED_PREFIXES.some((p) => pathname.startsWith(p))) {
-      router.replace("/field");
-    }
-  }, [loaded, isFieldRole, pathname, router]);
-
   async function signOut() {
     const supabase = createClient();
     await supabase.auth.signOut();
