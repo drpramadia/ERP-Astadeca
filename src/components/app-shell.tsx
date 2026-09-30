@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import type { ComponentType, ReactNode } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useSession } from "@/hooks/use-permissions";
+import { FieldShell } from "@/components/field-shell";
 
 type IconProps = {
   className?: string;
@@ -412,7 +413,11 @@ export function AppShell({ children }: { children: ReactNode }) {
   const router = useRouter();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const { userId, loaded, permissions, isSuperUser, isDirector, name, email, organizationName, roleName, systemType } = useSession();
+  const { userId, loaded, permissions, isSuperUser, isDirector, name, email, organizationName, roleName, roleCode, systemType } = useSession();
+
+  // Field workers (WAREHOUSE, QC) get a dedicated mobile-first shell —
+  // no admin sidebar, no dashboard, only their operational flows.
+  const isFieldRole = roleCode === "WAREHOUSE" || roleCode === "QC";
 
   const canSee = (perm: string | undefined) => {
     if (!perm) return true;
@@ -436,6 +441,15 @@ export function AppShell({ children }: { children: ReactNode }) {
     if (loaded && !userId) router.replace("/login");
   }, [loaded, userId, router]);
 
+  // Field workers are confined to their allowed flows — any other route
+  // (dashboard, admin pages, master data, ...) bounces back to /field.
+  const FIELD_ALLOWED_PREFIXES = ["/field", "/supply-chain/receiving", "/supply-chain/qc", "/supply-chain/delivery"];
+  useEffect(() => {
+    if (loaded && isFieldRole && !FIELD_ALLOWED_PREFIXES.some((p) => pathname.startsWith(p))) {
+      router.replace("/field");
+    }
+  }, [loaded, isFieldRole, pathname, router]);
+
   async function signOut() {
     const supabase = createClient();
     await supabase.auth.signOut();
@@ -455,6 +469,16 @@ export function AppShell({ children }: { children: ReactNode }) {
   }
 
   const initials = (name || email || "Pengguna").split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0]).join("").toUpperCase();
+
+  // Mobile field shell short-circuits the full admin layout entirely.
+  if (loaded && isFieldRole) {
+    const title =
+      pathname.includes("/qc") ? "QC Inspection" :
+      pathname.includes("/receiving") ? "Penerimaan Barang" :
+      pathname.includes("/delivery") ? "Pengiriman" :
+      "Menu Utama";
+    return <FieldShell title={title} roleName={roleName}>{children}</FieldShell>;
+  }
 
   return (
       <div className="min-h-screen bg-canvas text-ink">

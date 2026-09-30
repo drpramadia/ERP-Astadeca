@@ -33,12 +33,21 @@ export default function LoginPage() {
 
     const { data: membership } = await supabase
       .from("organization_memberships")
-      .select("role_id")
+      .select("role_id, roles!inner(code)")
       .eq("user_id", userId)
       .eq("is_active", "true")
       .maybeSingle();
 
     if (!membership?.role_id) { router.push("/login"); return; }
+
+    const roleCode = (membership as unknown as { roles?: { code?: string } }).roles?.code ?? "";
+
+    // Field users (WAREHOUSE, QC) go straight to mobile field interface
+    if (roleCode === "WAREHOUSE" || roleCode === "QC") {
+      router.push("/field");
+      router.refresh();
+      return;
+    }
 
     const rpResult = await supabase.from("role_permissions").select("permission_id").eq("role_id", membership.role_id);
     const permIds = (rpResult.data ?? []).map((r: { permission_id: string }) => r.permission_id);
