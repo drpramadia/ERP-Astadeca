@@ -434,10 +434,8 @@ export function AppShell({ children }: { children: ReactNode }) {
     .map((g) => ({ ...g, items: g.items.filter((i) => canSee(i.permission)) }))
     .filter((g) => g.items.length > 0);
 
-  // Redirect to login if the session resolves to no user.
-  useEffect(() => {
-    if (loaded && !userId) router.replace("/login");
-  }, [loaded, userId, router]);
+  // Redirect to login is handled by the proxy server-side — no client-side duplicate needed.
+  // The proxy catches unauthenticated requests before any page renders.
 
   async function signOut() {
     const supabase = createClient();
