@@ -129,6 +129,25 @@ export async function proxy(request: NextRequest) {
             return NextResponse.redirect(url);
           }
 
+          // WAREHOUSE / QC field workers — confine to mobile field flows
+          if (membership?.role_id) {
+            const { data: roleRow } = await supabase
+              .from("roles")
+              .select("code")
+              .eq("id", membership.role_id)
+              .single();
+            if (roleRow?.code === "WAREHOUSE" || roleRow?.code === "QC") {
+              const fieldAllowed = ["/field", "/supply-chain/receiving", "/supply-chain/qc", "/supply-chain/delivery"];
+              const isAllowed = fieldAllowed.some((p) => pathname === p || pathname.startsWith(`${p}/`));
+              if (!isAllowed) {
+                const url = request.nextUrl.clone();
+                url.pathname = "/field";
+                url.search = "";
+                return NextResponse.redirect(url);
+              }
+            }
+          }
+
           // Cold storage user tries to access operational pages
           if (hasRental && !hasOper) {
             const isOperationalPath = pathname === "/dashboard" ||
