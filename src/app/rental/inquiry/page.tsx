@@ -105,7 +105,7 @@ export default function InquiryPage() {
 
     const supabase = createClient();
     const { data: numData } = await supabase.rpc("generate_inquiry_number", { p_org_id: orgId });
-    const inquiryNumber: string = (numData as string) ?? `INQ-${Date.now()}`;
+    const inquiryNumber: string = (numData as string) ?? `INQ-${Date.now()};
 
     const { data, error } = await supabase.from("rental_inquiries").insert({
       organization_id: orgId,
@@ -178,7 +178,7 @@ export default function InquiryPage() {
                   </td>
                   <td className="px-4 py-3 text-slate-600">{inq.product_type || "-"}</td>
                   <td className="px-4 py-3">
-                    <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${STATUS_COLORS[inq.status] || ""}`}>
+                    <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${STATUS_COLORS[inq.status] || ""}}>
                       {inq.status}
                     </span>
                   </td>

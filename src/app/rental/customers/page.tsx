@@ -71,7 +71,7 @@ export default function CustomersPage() {
     return () => { cancelled = true; };
   }, []);
 
-  const filteredCustomers = customers.filter((customer) => `${customer.code} ${customer.name} ${customer.contact_person || ""}`.toLowerCase().includes(search.toLowerCase()));
+  const filteredCustomers = customers.filter((customer) => `${customer.code} ${customer.name} ${customer.contact_person || ""}.toLowerCase().includes(search.toLowerCase()));
   const selectedContracts = contracts.filter((contract) => contract.customer_id === selected?.id);
 
   return (

@@ -149,7 +149,7 @@ export default function PickingPage() {
     setMessage(null);
     try {
       const supabase = createClient();
-      const referenceNumber = `PICK-${Date.now()}`;
+      const referenceNumber = `PICK-${Date.now()};
       const { data, error: pickingError } = await supabase.rpc("issue_inventory_fefo", {
         p_organization_id: organizationId,
         p_product_id: productId,
@@ -164,7 +164,7 @@ export default function PickingPage() {
       if (pickingError) throw pickingError;
       const result = data?.[0];
       if (!result?.success) throw new Error(result?.message || "Picking tidak berhasil.");
-      setMessage(`${formatNumber(Number(result.total_issued))} ${products.find((product) => product.id === productId)?.units?.code || "unit"} dipilih dengan FEFO. Ref: ${referenceNumber}`);
+      setMessage(`${formatNumber(Number(result.total_issued))} ${products.find((product) => product.id === productId)?.units?.code || "unit"} dipilih dengan FEFO. Ref: ${referenceNumber});
       setLines([]);
     } catch (pickingError) {
       setError(pickingError instanceof Error ? pickingError.message : "Gagal menyimpan picking.");
@@ -183,7 +183,7 @@ export default function PickingPage() {
         {message && <p role="status" className="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{message}</p>}
         <section className="border-b border-line pb-5">
           <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_180px_auto] sm:items-end">
-            <Select label="Produk" options={[{ value: "", label: "Pilih produk" }, ...products.map((product) => ({ value: product.id, label: `${product.sku} · ${product.name}` }))]} value={productId} onChange={(event) => { setProductId(event.target.value); setLines([]); }} disabled={isLoading} />
+            <Select label="Produk" options={[{ value: "", label: "Pilih produk" }, ...products.map((product) => ({ value: product.id, label: `${product.sku} · ${product.name} }))]} value={productId} onChange={(event) => { setProductId(event.target.value); setLines([]); }} disabled={isLoading} />
             <Input label={`Jumlah${selectedProduct?.units?.code ? ` (${selectedProduct.units.code})` : ""}`} type="number" min="0.001" step="0.001" value={quantity} onChange={(event) => setQuantity(event.target.value)} />
             <Button loading={isPreviewing} onClick={() => void preview()}>Pratinjau FEFO</Button>
           </div>

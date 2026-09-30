@@ -141,7 +141,7 @@ export default function DocumentCenterPage() {
               !selectedCategory && !selectedType
                 ? "bg-ink text-white"
                 : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-            }`}
+            }}
           >
             Semua
           </button>
@@ -153,7 +153,7 @@ export default function DocumentCenterPage() {
                 selectedCategory === category
                   ? "bg-ink text-white"
                   : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-              }`}
+              }}
             >
               {category}
             </button>
@@ -171,7 +171,7 @@ export default function DocumentCenterPage() {
                   selectedType === type
                     ? "bg-primary text-white"
                     : "bg-slate-50 text-slate-500 hover:bg-slate-100"
-                }`}
+                }}
               >
                 {DOCUMENT_TYPE_LABELS[type]}
               </button>
@@ -244,7 +244,7 @@ export default function DocumentCenterPage() {
                     </td>
                     <td className="p-3">
                       <div className="flex gap-1">
-                        <Link href={`/documents/${doc.id}`}>
+                        <Link href={`/documents/${doc.id}}>
                           <Button variant="ghost" size="sm">Lihat</Button>
                         </Link>
                         <Link href={`/documents/${doc.id}/print`}>

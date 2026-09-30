@@ -125,18 +125,18 @@ export default function SystemPickPage() {
                     ${loading === sys.id ? "opacity-60 cursor-wait" : ""}
                   `}
                 >
-                  <div aria-hidden="true" className={`pointer-events-none absolute inset-0 rounded-2xl bg-gradient-to-r ${sys.accent} opacity-0 transition-opacity duration-300 ${hovered === sys.id ? "opacity-[0.06]" : ""}`} />
-                  <div className={`relative flex h-14 w-14 shrink-0 items-center justify-center rounded-xl ${sys.bgAccent} border ${sys.borderAccent} transition-transform duration-300 ${hovered === sys.id ? "scale-110" : ""}`}>
+                  <div aria-hidden="true" className={`pointer-events-none absolute inset-0 rounded-2xl bg-gradient-to-r ${sys.accent} opacity-0 transition-opacity duration-300 ${hovered === sys.id ? "opacity-[0.06]" : ""}} />
+                  <div className={`relative flex h-14 w-14 shrink-0 items-center justify-center rounded-xl ${sys.bgAccent} border ${sys.borderAccent} transition-transform duration-300 ${hovered === sys.id ? "scale-110" : ""}}>
                     <div className={sys.textAccent}>{sys.icon}</div>
                   </div>
                   <div className="relative min-w-0 flex-1">
                     <div className="flex items-center gap-2">
                       <h3 className="text-sm font-semibold text-white">{sys.label}</h3>
-                      <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${sys.bgAccent} ${sys.textAccent}`}>{sys.tagline}</span>
+                      <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${sys.bgAccent} ${sys.textAccent}}>{sys.tagline}</span>
                     </div>
                     <p className="mt-1 text-xs text-slate-400 leading-relaxed">{sys.description}</p>
                   </div>
-                  <div className={`relative flex items-center self-center text-slate-500 transition-all duration-300 ${hovered === sys.id ? "translate-x-1 text-white" : ""}`}>
+                  <div className={`relative flex items-center self-center text-slate-500 transition-all duration-300 ${hovered === sys.id ? "translate-x-1 text-white" : ""}}>
                     {loading === sys.id ? (
                       <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>
                     ) : (

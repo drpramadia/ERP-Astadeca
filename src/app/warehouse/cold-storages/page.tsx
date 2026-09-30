@@ -274,7 +274,7 @@ export default function ColdStoragesPage() {
       <div className="mx-auto max-w-7xl">
         <PageHeader
           eyebrow="GUDANG"
-          title={selectedStorage ? `Bin Rack — ${selectedStorage.name}` : "Cold Storage"}
+          title={selectedStorage ? `Bin Rack — ${selectedStorage.name} : "Cold Storage"}
           description={
             selectedStorage
               ? `Grid ${selectedStorage.rows} baris × ${selectedStorage.columns} kolom. Klik bin untuk melihat/menugaskan isi.`
@@ -350,7 +350,7 @@ export default function ColdStoragesPage() {
                         <div className="flex items-center gap-2">
                           <span className="font-mono text-sm font-semibold text-slate-500">{cs.code}</span>
                           <span className="text-sm font-medium text-ink">{cs.name}</span>
-                          <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold ${badge.cls}`}>
+                          <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold ${badge.cls}}>
                             {badge.label}
                           </span>
                         </div>
@@ -447,7 +447,7 @@ export default function ColdStoragesPage() {
             >
               {/* Column headers (numbers) */}
               {Array.from({ length: selectedStorage.columns }, (_, i) => (
-                <div key={`ch-${i}`} className="flex items-center justify-center text-xs font-semibold text-slate-400">
+                <div key={`ch-${i}} className="flex items-center justify-center text-xs font-semibold text-slate-400">
                   {i + 1}
                 </div>
               ))}
@@ -457,7 +457,7 @@ export default function ColdStoragesPage() {
                 return (
                   <>
                     {/* Row header (letter) */}
-                    <div key={`rh-${ri}`} className="flex items-center justify-center text-xs font-semibold text-slate-400">
+                    <div key={`rh-${ri}} className="flex items-center justify-center text-xs font-semibold text-slate-400">
                       {rowLetter}
                     </div>
 
@@ -470,7 +470,7 @@ export default function ColdStoragesPage() {
 
                       return (
                         <div
-                          key={`bin-${ri}-${ci}`}
+                          key={`bin-${ri}-${ci}}
                           onClick={() => bin && handleBinClick(bin)}
                           className={`
                             relative flex flex-col items-center justify-center rounded-lg border-2 font-mono text-xs font-bold
@@ -479,11 +479,11 @@ export default function ColdStoragesPage() {
                             ${isSelected ? "ring-2 ring-primary ring-offset-2" : ""}
                             ${bin ? "shadow-sm" : "opacity-40"}
                           `}
-                          title={bin ? `${bin.code} — ${bin.status}` : "Tidak tersedia"}
+                          title={bin ? `${bin.code} — ${bin.status} : "Tidak tersedia"}
                         >
-                          <span className={`${labelColor}`}>{bin?.code ?? "—"}</span>
+                          <span className={`${labelColor}}>{bin?.code ?? "—"}</span>
                           {bin?.current_kg != null && (
-                            <span className={`mt-0.5 text-[10px] font-normal ${labelColor}`}>
+                            <span className={`mt-0.5 text-[10px] font-normal ${labelColor}}>
                               {bin.current_kg}kg
                             </span>
                           )}
@@ -501,7 +501,7 @@ export default function ColdStoragesPage() {
                 <div className="border-b border-line px-5 py-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <span className={`rounded-lg border-2 px-3 py-1 font-mono text-sm font-bold ${BIN_COLORS[selectedBin.status]} ${BIN_LABEL_COLORS[selectedBin.status]}`}>
+                      <span className={`rounded-lg border-2 px-3 py-1 font-mono text-sm font-bold ${BIN_COLORS[selectedBin.status]} ${BIN_LABEL_COLORS[selectedBin.status]}}>
                         {selectedBin.code}
                       </span>
                       <div>
@@ -538,7 +538,7 @@ export default function ColdStoragesPage() {
                             <p className="text-sm font-medium text-ink">{item.products?.name ?? "—"}</p>
                             <p className="text-xs text-slate-400">
                               SKU: {item.products?.sku ?? "—"} · Batch: {item.batches?.batch_number ?? "—"}
-                              {item.batches?.expiry_date && ` · Exp: ${item.batches.expiry_date}`}
+                              {item.batches?.expiry_date && ` · Exp: ${item.batches.expiry_date}}
                             </p>
                           </div>
                           <div className="text-right">

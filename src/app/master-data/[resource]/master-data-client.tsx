@@ -226,7 +226,7 @@ function templateHintRow(definition: ResourceDefinition, options: Record<string,
     if (field.type === "number") return "angka";
     if (field.type === "select" && field.optionSource) {
       const codes = (options[field.optionSource] || []).map((option) => option.code);
-      return codes.length ? `kode: ${codes.join(" | ")}` : `kode ${field.optionSource}`;
+      return codes.length ? `kode: ${codes.join(" | ")} : `kode ${field.optionSource};
     }
     if (field.type === "email") return "email";
     return field.required ? "wajib diisi" : "opsional";
@@ -616,7 +616,7 @@ export function MasterDataClient({ resource }: { resource: string }) {
 
     setImportIssues(issues);
     if (parsed.length === 0) {
-      setError(`Tidak ada baris yang valid.${issues[0] ? ` Baris ${issues[0].line}: ${issues[0].message}` : ""}`);
+      setError(`Tidak ada baris yang valid.${issues[0] ? ` Baris ${issues[0].line}: ${issues[0].message} : ""}`);
       return;
     }
     setImportRows(parsed);
@@ -632,7 +632,7 @@ export function MasterDataClient({ resource }: { resource: string }) {
       .select("*");
     setIsImporting(false);
     if (insertError) {
-      setError(`Impor gagal: ${insertError.message}`);
+      setError(`Impor gagal: ${insertError.message});
       return;
     }
     const inserted = (data || []) as MasterRow[];
@@ -660,9 +660,9 @@ export function MasterDataClient({ resource }: { resource: string }) {
           {Object.entries(resourceDefinitions).map(([key, item]) => (
             <Link
               key={key}
-              href={`/master-data/${key}`}
+              href={`/master-data/${key}}
               aria-current={resource === key ? "page" : undefined}
-              className={`whitespace-nowrap border-b-2 px-1 pb-3 text-sm font-medium ${resource === key ? "border-primary text-primary" : "border-transparent text-slate-500 hover:text-ink"}`}
+              className={`whitespace-nowrap border-b-2 px-1 pb-3 text-sm font-medium ${resource === key ? "border-primary text-primary" : "border-transparent text-slate-500 hover:text-ink"}}
             >
               {item.title}
             </Link>
@@ -671,7 +671,7 @@ export function MasterDataClient({ resource }: { resource: string }) {
         {error && <p role="alert" className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>}
         {notice && <p role="status" className="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">{notice}</p>}
         <div className="mb-4 flex flex-wrap items-center gap-3 border-b border-line pb-4">
-          <Input aria-label={`Cari ${definition.title}`} placeholder="Cari kode atau nama" value={search} onChange={(event) => setSearch(event.target.value)} className="max-w-sm" />
+          <Input aria-label={`Cari ${definition.title}} placeholder="Cari kode atau nama" value={search} onChange={(event) => setSearch(event.target.value)} className="max-w-sm" />
           <div className="ml-auto flex flex-wrap items-center gap-2">
             <Button size="sm" variant="secondary" onClick={downloadTemplate}>Unduh template CSV</Button>
             <Button size="sm" variant="secondary" onClick={exportRows} disabled={rows.length === 0}>Ekspor CSV</Button>
@@ -702,7 +702,7 @@ export function MasterDataClient({ resource }: { resource: string }) {
                 <th className="w-10 px-4 py-3">
                   <input
                     type="checkbox"
-                    aria-label={`Pilih semua ${definition.title}`}
+                    aria-label={`Pilih semua ${definition.title}}
                     checked={filteredRows.length > 0 && filteredRows.every((row) => selected.has(row.id))}
                     onChange={(event) => setSelected(event.target.checked ? new Set(filteredRows.map((row) => row.id)) : new Set())}
                   />
@@ -720,7 +720,7 @@ export function MasterDataClient({ resource }: { resource: string }) {
                       <td className="px-4 py-3">
                         <input
                           type="checkbox"
-                          aria-label={`Pilih ${displayValue(row[definition.primaryField])}`}
+                          aria-label={`Pilih ${displayValue(row[definition.primaryField])}}
                           checked={selected.has(row.id)}
                           onChange={(event) => setSelected((current) => {
                             const next = new Set(current);
@@ -756,7 +756,7 @@ export function MasterDataClient({ resource }: { resource: string }) {
         )}
       </div>
 
-      <Modal isOpen={isEditorOpen} onClose={() => setIsEditorOpen(false)} title={editing ? `Edit ${definition.title}` : `Tambah ${definition.title}`} size="lg">
+      <Modal isOpen={isEditorOpen} onClose={() => setIsEditorOpen(false)} title={editing ? `Edit ${definition.title} : `Tambah ${definition.title}} size="lg">
         <form onSubmit={(event) => void save(event)} className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
             {definition.fields.map((field) => {
@@ -767,7 +767,7 @@ export function MasterDataClient({ resource }: { resource: string }) {
                 return <div key={field.name} className="sm:col-span-2"><Textarea label={field.label} required={field.required} value={String(form[field.name] ?? "")} onChange={(event) => setForm((current) => ({ ...current, [field.name]: event.target.value }))} /></div>;
               }
               if (field.type === "select") {
-                const sourceOptions = field.optionSource ? (options[field.optionSource] || []).map((option) => ({ value: option.id, label: `${option.code} · ${option.name}` })) : [];
+                const sourceOptions = field.optionSource ? (options[field.optionSource] || []).map((option) => ({ value: option.id, label: `${option.code} · ${option.name} })) : [];
                 return <Select key={field.name} label={field.label} required={field.required} options={[{ value: "", label: "Pilih..." }, ...(field.options || sourceOptions)]} value={String(form[field.name] ?? "")} onChange={(event) => setForm((current) => ({ ...current, [field.name]: event.target.value }))} />;
               }
               return <Input key={field.name} label={field.label} type={field.type} required={field.required} min={field.type === "number" ? "0" : undefined} step={field.type === "number" ? "any" : undefined} value={String(form[field.name] ?? "")} onChange={(event) => setForm((current) => ({ ...current, [field.name]: event.target.value }))} />;
@@ -780,11 +780,11 @@ export function MasterDataClient({ resource }: { resource: string }) {
         </form>
       </Modal>
 
-      <Modal isOpen={details !== null} onClose={() => setDetails(null)} title={`Detail ${definition.title}`} size="lg">
+      <Modal isOpen={details !== null} onClose={() => setDetails(null)} title={`Detail ${definition.title}} size="lg">
         {details && <dl className="grid gap-3 sm:grid-cols-2">{Object.entries(details).filter(([key]) => !["id", "organization_id"].includes(key)).map(([key, value]) => <div key={key} className="border-b border-line pb-2"><dt className="text-xs text-slate-500">{key.replaceAll("_", " ")}</dt><dd className="mt-1 break-words text-sm text-ink">{displayValue(value)}</dd></div>)}</dl>}
       </Modal>
 
-      <Modal isOpen={importRows !== null} onClose={() => { setImportRows(null); setImportIssues([]); }} title={`Pratinjau impor ${definition.title}`} size="lg">
+      <Modal isOpen={importRows !== null} onClose={() => { setImportRows(null); setImportIssues([]); }} title={`Pratinjau impor ${definition.title}} size="lg">
         <div className="space-y-4">
           <p className="text-sm text-ink">
             <strong>{importRows?.length ?? 0} baris</strong> siap diimpor.
@@ -818,7 +818,7 @@ export function MasterDataClient({ resource }: { resource: string }) {
         </div>
       </Modal>
 
-      <Modal isOpen={confirmDelete !== null} onClose={() => setConfirmDelete(null)} title={`Hapus ${definition.title}`}>
+      <Modal isOpen={confirmDelete !== null} onClose={() => setConfirmDelete(null)} title={`Hapus ${definition.title}}>
         {confirmDelete && (
           <div className="space-y-4">
             <p className="text-sm text-ink">

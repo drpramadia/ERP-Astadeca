@@ -193,7 +193,7 @@ const user = sessionData?.session?.user;
                   ["Customer", contract.customers?.name || "—"],
                   ["Kode Customer", contract.customers?.code || "—"],
                   ["Cold Storage", contract.cold_storages?.name || "—"],
-                  ["Periode", `${new Date(contract.start_date).toLocaleDateString("id-ID")}${contract.end_date ? ` – ${new Date(contract.end_date).toLocaleDateString("id-ID")}` : " (berkelanjutan)"}`],
+                  ["Periode", `${new Date(contract.start_date).toLocaleDateString("id-ID")}${contract.end_date ? ` – ${new Date(contract.end_date).toLocaleDateString("id-ID")} : " (berkelanjutan)"}`],
                   ["Billing", freqLabel[contract.billing_frequency] || contract.billing_frequency],
                   ["Termin Bayar", `${contract.payment_terms_days} hari`],
                   ["Dibuat", new Date(contract.created_at).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })],
@@ -251,7 +251,7 @@ const user = sessionData?.session?.user;
                               a.status === "ACTIVE" ? "bg-emerald-50 text-emerald-700" :
                               a.status === "PARTIALLY_RELEASED" ? "bg-amber-50 text-amber-700" :
                               "bg-slate-100 text-slate-500"
-                            }`}>{a.status.replace("_", " ")}</span>
+                            }}>{a.status.replace("_", " ")}</span>
                           </td>
                         </tr>
                       ))}

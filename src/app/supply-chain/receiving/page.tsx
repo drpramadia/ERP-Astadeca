@@ -327,7 +327,7 @@ export default function ReceivingPage() {
                 activeTab === tab
                   ? "border-b-2 border-primary text-primary"
                   : "text-slate-500 hover:text-ink"
-              }`}
+              }}
             >
               {tab === "receiving" ? "Penerimaan" : "Kendali Mutu"}
             </button>
@@ -460,7 +460,7 @@ export default function ReceivingPage() {
                 { value: "", label: "— Pilih PO —" },
                 ...purchaseOrders.map((po) => ({
                   value: po.id,
-                  label: `${po.po_number}  ·  ${po.suppliers?.name ?? ""}  ·  ${formatDate(po.order_date)}`,
+                  label: `${po.po_number}  ·  ${po.suppliers?.name ?? ""}  ·  ${formatDate(po.order_date)},
                 })),
               ]}
               value={selectedPoId}
@@ -556,7 +556,7 @@ export default function ReceivingPage() {
                       label="Cold Storage"
                       options={[
                         { value: "", label: "—" },
-                        ...coldStorages.map((cs) => ({ value: cs.id, label: `${cs.code} · ${cs.name}` })),
+                        ...coldStorages.map((cs) => ({ value: cs.id, label: `${cs.code} · ${cs.name} })),
                       ]}
                       value={item.cold_storage_id}
                       onChange={(e) => handleStorageChange(idx, e.target.value)}
@@ -567,7 +567,7 @@ export default function ReceivingPage() {
                         { value: "", label: "—" },
                         ...filteredLocations(item.cold_storage_id).map((loc) => ({
                           value: loc.id,
-                          label: `${loc.code} · ${loc.name}`,
+                          label: `${loc.code} · ${loc.name},
                         })),
                       ]}
                       value={item.storage_location_id}

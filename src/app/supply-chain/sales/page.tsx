@@ -317,8 +317,8 @@ export default function SalesPage() {
     <AppShell>
       {lowStockCount > 0 || outOfStockCount > 0 ? (
         <div className="mx-auto max-w-7xl mt-4">
-          <div className={`rounded-xl border px-4 py-3 text-sm flex items-center gap-3 ${outOfStockCount > 0 ? "border-red-200 bg-red-50" : "border-amber-200 bg-amber-50"}`}>
-            <svg className={`h-5 w-5 shrink-0 ${outOfStockCount > 0 ? "text-red-500" : "text-amber-500"}`} fill="currentColor" viewBox="0 0 20 20">
+          <div className={`rounded-xl border px-4 py-3 text-sm flex items-center gap-3 ${outOfStockCount > 0 ? "border-red-200 bg-red-50" : "border-amber-200 bg-amber-50"}}>
+            <svg className={`h-5 w-5 shrink-0 ${outOfStockCount > 0 ? "text-red-500" : "text-amber-500"}} fill="currentColor" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
             </svg>
             <span className={outOfStockCount > 0 ? "text-red-700" : "text-amber-700"}>
@@ -355,7 +355,7 @@ export default function SalesPage() {
               activeTab === "orders"
                 ? "border-b-2 border-primary text-primary"
                 : "text-slate-500 hover:text-ink"
-            }`}
+            }}
           >
             Sales Orders
           </button>
@@ -365,7 +365,7 @@ export default function SalesPage() {
               activeTab === "quotations"
                 ? "border-b-2 border-primary text-primary"
                 : "text-slate-500 hover:text-ink"
-            }`}
+            }}
           >
             Quotations
           </button>
@@ -495,7 +495,7 @@ export default function SalesPage() {
           <div className="grid gap-4 sm:grid-cols-2">
             <Select
               label="Customer *"
-              options={[{ value: "", label: "Pilih customer" }, ...customers.map(c => ({ value: c.id, label: `${c.code} · ${c.name}` }))]}
+              options={[{ value: "", label: "Pilih customer" }, ...customers.map(c => ({ value: c.id, label: `${c.code} · ${c.name} }))]}
               value={quotationForm.customer_id}
               onChange={e => setQuotationForm(f => ({ ...f, customer_id: e.target.value }))}
             />
@@ -649,7 +649,7 @@ export default function SalesPage() {
           <div className="grid gap-4 sm:grid-cols-2">
             <Select
               label="Customer *"
-              options={[{ value: "", label: "Pilih customer" }, ...customers.map(c => ({ value: c.id, label: `${c.code} · ${c.name}` }))]}
+              options={[{ value: "", label: "Pilih customer" }, ...customers.map(c => ({ value: c.id, label: `${c.code} · ${c.name} }))]}
               value={soForm.customer_id}
               onChange={e => setSoForm(f => ({ ...f, customer_id: e.target.value }))}
             />
@@ -668,7 +668,7 @@ export default function SalesPage() {
             />
             <Select
               label="Ref. Quotation"
-              options={[{ value: "", label: "Tidak ada" }, ...quotations.filter(q => q.status === "APPROVED" || q.status === "DRAFT").map(q => ({ value: q.id, label: `${q.quotation_number} · ${q.qt_customer_fk?.name || ""}` }))]}
+              options={[{ value: "", label: "Tidak ada" }, ...quotations.filter(q => q.status === "APPROVED" || q.status === "DRAFT").map(q => ({ value: q.id, label: `${q.quotation_number} · ${q.qt_customer_fk?.name || ""} }))]}
               value={soForm.quotation_id}
               onChange={e => setSoForm(f => ({ ...f, quotation_id: e.target.value }))}
               hint="Opsional"

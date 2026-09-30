@@ -222,7 +222,7 @@ export default function DeliveryPage() {
           <div className={`mb-4 rounded-lg border px-4 py-3 text-sm ${actionMessage.type === "success"
               ? "border-emerald-200 bg-emerald-50 text-emerald-700"
               : "border-red-200 bg-red-50 text-red-700"
-            }`}>
+            }}>
             {actionMessage.text}
           </div>
         )}
@@ -352,7 +352,7 @@ export default function DeliveryPage() {
             <div className={`rounded-lg border px-3 py-2 text-sm ${actionMessage.type === "success"
                 ? "border-emerald-200 bg-emerald-50 text-emerald-700"
                 : "border-red-200 bg-red-50 text-red-700"
-              }`}>
+              }}>
               {actionMessage.text}
             </div>
           )}
@@ -369,7 +369,7 @@ export default function DeliveryPage() {
       <Modal
         isOpen={showDetailModal}
         onClose={() => setShowDetailModal(false)}
-        title={selectedDelivery ? `Detail: ${selectedDelivery.do_number}` : "Detail Delivery Order"}
+        title={selectedDelivery ? `Detail: ${selectedDelivery.do_number} : "Detail Delivery Order"}
         size="lg"
       >
         {selectedDelivery && (

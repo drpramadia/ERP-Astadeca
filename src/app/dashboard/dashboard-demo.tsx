@@ -82,7 +82,7 @@ export function DashboardDemo({
   databaseError: string;
 }) {
   const router = useRouter();
-  const storageKey = `astadeca-dashboard-demo:${organizationId}`;
+  const storageKey = `astadeca-dashboard-demo:${organizationId};
   const data = useSyncExternalStore(
     (callback) => subscribe(storageKey, callback),
     () => getSnapshot(storageKey),

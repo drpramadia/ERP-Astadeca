@@ -238,7 +238,7 @@ export default function BillingPage() {
                         {inv.due_date ? formatDate(inv.due_date) : "—"}
                       </td>
                       <td className="px-4 py-3 text-center">
-                        <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${st.tone}`}>{st.label}</span>
+                        <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${st.tone}}>{st.label}</span>
                       </td>
                     </tr>
                   );

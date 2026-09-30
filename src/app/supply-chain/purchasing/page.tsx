@@ -284,7 +284,7 @@ export default function PurchasingPage() {
               activeTab === "orders"
                 ? "border-b-2 border-primary text-primary"
                 : "text-slate-500 hover:text-ink"
-            }`}
+            }}
           >
             Purchase Orders
           </button>
@@ -294,7 +294,7 @@ export default function PurchasingPage() {
               activeTab === "requests"
                 ? "border-b-2 border-primary text-primary"
                 : "text-slate-500 hover:text-ink"
-            }`}
+            }}
           >
             Purchase Requests
           </button>

@@ -225,7 +225,7 @@ export default function RentalReceivingPage() {
         .maybeSingle();
 
       const contract = contracts.find((c) => c.id === selectedContractId);
-      const refBase = `RGR-${new Date().toISOString().slice(0, 10)}-${Date.now().toString(36).toUpperCase()}`;
+      const refBase = `RGR-${new Date().toISOString().slice(0, 10)}-${Date.now().toString(36).toUpperCase()};
 
       if (tableCheck !== null) {
         // ── Dedicated schema: rental_goods_receipts + rental_goods_receipt_items ──
@@ -333,7 +333,7 @@ export default function RentalReceivingPage() {
               movement_subtype: "RENTAL_GOODS_RECEIPT",
               quantity_kg: Number(line.qtyKg),
               quantity_unit: null,
-              reference_number: `${refBase}-${line.batchNumber.trim()}`,
+              reference_number: `${refBase}-${line.batchNumber.trim()},
               notes: notes || null,
               performed_by: actorId,
               performed_at: new Date().toISOString(),
