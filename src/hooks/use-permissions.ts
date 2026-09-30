@@ -102,7 +102,7 @@ export function useSession() {
   const load = useCallback(async () => {
     const supabase = createClient();
 
-    const { data: claimsData } = await supabase.auth.getSession();
+    const { data: sessionData } = await supabase.auth.getSession();
     const claims = sessionData?.session?.user as
       | { sub?: string; email?: string }
       | undefined;
