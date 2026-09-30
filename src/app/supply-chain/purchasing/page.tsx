@@ -54,6 +54,10 @@ export default function PurchasingPage() {
   const [userId, setUserId] = useState<string>("");
   const [actingId, setActingId] = useState<string | null>(null);
   const [actionType, setActionType] = useState<string>("");
+  const [showPODetail, setShowPODetail] = useState(false);
+  const [selectedPO, setSelectedPO] = useState<PurchaseOrder | null>(null);
+  const [poItems, setPOItems] = useState<any[]>([]);
+  const [loadingItems, setLoadingItems] = useState(false);
 
   useEffect(() => {
     async function init() {
@@ -145,6 +149,38 @@ export default function PurchasingPage() {
       alert("Gagal membuat PO: " + (e?.message || e));
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleSubmitPO(poId: string) {
+    setActingId(poId);
+    setActionType("submit");
+    try {
+      const supabase = createClient();
+      const { error } = await supabase.rpc("submit_po", { p_po_id: poId, p_submitted_by: userId } as Record<string, unknown>);
+      if (error) throw error;
+      window.location.reload();
+    } catch (e: any) {
+      alert("Gagal cancel: " + (e?.message || e));
+      setActingId(null);
+    }
+  }
+
+  async function handleViewPO(po: PurchaseOrder) {
+    setSelectedPO(po);
+    setShowPODetail(true);
+    setLoadingItems(true);
+    try {
+      const supabase = createClient();
+      const { data } = await supabase
+        .from("purchase_order_items")
+        .select("*, products(name, sku), units(code)")
+        .eq("po_id", po.id);
+      setPOItems(data || []);
+    } catch (e) {
+      console.error("Error loading PO items:", e);
+    } finally {
+      setLoadingItems(false);
     }
   }
 
@@ -316,7 +352,7 @@ export default function PurchasingPage() {
                           </td>
                           <td className="px-4 py-3 text-center">
                             <div className="flex items-center justify-center gap-2">
-                              <button className="text-xs font-medium text-primary hover:underline">Lihat</button>
+                              <button onClick={() => handleViewPO(order)} className="text-xs font-medium text-primary hover:underline">Lihat</button>
                               {order.status === "DRAFT" && (
                                 <>
                                   <button
@@ -556,6 +592,76 @@ export default function PurchasingPage() {
               <button onClick={() => void handleCreatePR()} disabled={saving} className="px-4 py-2 rounded-lg bg-primary text-white text-sm disabled:opacity-50">
                 {saving ? "Menyimpan..." : "Simpan"}
               </button>
+            </div>
+          </div>
+        )}
+      )}
+
+      {/* PO Detail Modal */}
+      {showPODetail && selectedPO && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-line">
+              <h2 className="text-lg font-semibold">Detail PO: {selectedPO.po_number}</h2>
+              <button onClick={() => setShowPODetail(false)} className="text-slate-500 hover:text-slate-700">×</button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-6">
+              <div className="grid grid-cols-2 gap-4 mb-6">
+                <div>
+                  <p className="text-xs text-slate-500 uppercase tracking-wider">Supplier</p>
+                  <p className="text-sm font-medium">{selectedPO.suppliers?.name || "-"}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-slate-500 uppercase tracking-wider">Tanggal</p>
+                  <p className="text-sm">{formatDate(selectedPO.order_date)}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-slate-500 uppercase tracking-wider">Status</p>
+                  <StatusBadge tone={statusOptions[selectedPO.status]?.tone || "neutral"}>{statusOptions[selectedPO.status]?.label || selectedPO.status}</StatusBadge>
+                </div>
+                <div>
+                  <p className="text-xs text-slate-500 uppercase tracking-wider">Total</p>
+                  <p className="text-sm font-semibold">{formatCurrency(Number(selectedPO.total_amount))}</p>
+                </div>
+              </div>
+
+              <h3 className="text-sm font-semibold mb-3">Item PO</h3>
+              {loadingItems ? (
+                <div className="text-center py-8 text-slate-500">Memuat...</div>
+              ) : (
+                <div className="border border-line rounded-lg overflow-hidden">
+                  <table className="w-full text-sm">
+                    <thead className="bg-slate-50">
+                      <tr>
+                        <th className="px-3 py-2 text-left text-xs font-medium text-slate-600">SKU</th>
+                        <th className="px-3 py-2 text-left text-xs font-medium text-slate-600">Produk</th>
+                        <th className="px-3 py-2 text-right text-xs font-medium text-slate-600">Qty</th>
+                        <th className="px-3 py-2 text-left text-xs font-medium text-slate-600">Satuan</th>
+                        <th className="px-3 py-2 text-right text-xs font-medium text-slate-600">Harga</th>
+                        <th className="px-3 py-2 text-right text-xs font-medium text-slate-600">Subtotal</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-line">
+                      {poItems.map((item: any) => (
+                        <tr key={item.id}>
+                          <td className="px-3 py-2">{item.products?.sku || "-"}</td>
+                          <td className="px-3 py-2">{item.products?.name || "-"}</td>
+                          <td className="px-3 py-2 text-right">{Number(item.quantity).toFixed(2)}</td>
+                          <td className="px-3 py-2">{item.units?.code || "-"}</td>
+                          <td className="px-3 py-2 text-right">{item.unit_price ? formatCurrency(Number(item.unit_price)) : "-"}</td>
+                          <td className="px-3 py-2 text-right font-medium">{item.unit_price ? formatCurrency(Number(item.quantity) * Number(item.unit_price)) : "-"}</td>
+                        </tr>
+                      ))}
+                      {poItems.length === 0 && (
+                        <tr><td colSpan={6} className="px-3 py-8 text-center text-slate-500">Tidak ada item</td></tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+            <div className="flex justify-end gap-2 px-6 py-4 border-t border-line">
+              <button onClick={() => setShowPODetail(false)} className="px-4 py-2 rounded-lg border border-line text-sm hover:bg-slate-50">Tutup</button>
             </div>
           </div>
         </div>
