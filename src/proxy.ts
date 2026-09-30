@@ -99,7 +99,7 @@ export async function proxy(request: NextRequest) {
         const { data: membership } = await supabase
           .from("organization_memberships")
           .select("role_id")
-          .eq("user_id", sessionData.session.user.id)
+          .eq("user_id", sessionData?.session?.user?.id)
           .eq("is_active", true)
           .maybeSingle();
 
