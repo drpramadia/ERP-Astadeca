@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import type { ComponentType, ReactNode } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useSession } from "@/hooks/use-permissions";
+import { FieldShell } from "@/components/field-shell";
 
 type IconProps = {
   className?: string;
@@ -416,6 +417,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   // Field workers (WAREHOUSE, QC) see a filtered sidebar — no admin/finance
   // sections — but stay in the same AppShell layout. (See navSystems/visibleGroups below.)
+  const isFieldRole = roleCode === "WAREHOUSE" || roleCode === "QC";
 
   const canSee = (perm: string | undefined) => {
     if (!perm) return true;
@@ -459,6 +461,15 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   // Field workers always go through AppShell (sidebar layout).
   // FieldShell is reserved exclusively for /field.
+  if (loaded && isFieldRole) {
+    const title =
+      pathname.includes("/qc") ? "QC Inspection" :
+      pathname.includes("/receiving") ? "Penerimaan Barang" :
+      pathname.includes("/delivery") ? "Pengiriman" :
+      "Menu Utama";
+    return <FieldShell title={title} roleName={roleName}>{children}</FieldShell>;
+  }
+
   return (
       <div className="min-h-screen bg-canvas text-ink">
       <div className="flex min-h-screen">
