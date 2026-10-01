@@ -30,7 +30,7 @@ export const metadata: Metadata = {
   },
   description: "Sistem manajemen cold storage, rantai pasok, dan penyewaan gudang.",
   applicationName: "ASTADECA Warehouse System",
-  manifest: "/manifest-field.json",
+  manifest: "/manifest.json",
   icons: {
     icon: "/icon-192.png",
     apple: "/icon-192.png",
