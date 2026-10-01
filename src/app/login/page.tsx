@@ -74,25 +74,9 @@ export default function LoginPage() {
       return;
     }
 
-    const rpResult = await supabase.from("role_permissions").select("permission_id").eq("role_id", membership.role_id);
-    const permIds = (rpResult.data ?? []).map((r: { permission_id: string }) => r.permission_id);
-
-    const { data: permData } = permIds.length > 0
-      ? await supabase.from("permissions").select("code").in("id", permIds)
-      : { data: null };
-
-    const perms: string[] = (permData ?? []).map((p: { code: string }) => p.code);
-    const hasRental = perms.some(c => c.startsWith("rental."));
-    const hasOper   = perms.some(c =>
-      c.startsWith("inventory.") || c.startsWith("purchase.") ||
-      c.startsWith("sales.")    || c.startsWith("finance.")  ||
-      c === "operational.view"
-    );
-
-    if (hasRental && hasOper) {
-      router.push("/system-pick");
-    } else if (hasRental) {
-      router.push("/rental");
+    // Field users (WAREHOUSE, QC) go to mobile field interface.
+    if (roleCode === "WAREHOUSE" || roleCode === "QC") {
+      router.push("/field");
     } else {
       router.push("/dashboard");
     }

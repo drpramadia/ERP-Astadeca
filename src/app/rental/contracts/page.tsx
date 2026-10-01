@@ -67,7 +67,7 @@ const STATUS_LABEL: Record<string, string> = {
 };
 
 export default function RentalContractsPage() {
-  const { userId, loaded } = useSession();
+  const { userId, loaded, permissions } = useSession();
   const [contracts, setContracts] = useState<RentalContract[]>([]);
   const [customers, setCustomers] = useState<RentalCustomer[]>([]);
   const [canManage, setCanManage] = useState(false);
@@ -90,6 +90,7 @@ export default function RentalContractsPage() {
       });
   }
 
+  /* eslint-disable react-hooks/exhaustive-deps */
   useEffect(() => {
     if (!loaded || !userId) return;
     async function init() {
@@ -98,6 +99,7 @@ export default function RentalContractsPage() {
         .from("organization_memberships").select("organization_id")
         .eq("user_id", userId).eq("is_active", "true").maybeSingle();
       if (!memb) return;
+      if (!permissions.has("rental.view")) return;
 
       const [{ data: custData }, { data: permData }] = await Promise.all([
         supabase.from("customers").select("id, code, name")
@@ -111,6 +113,7 @@ export default function RentalContractsPage() {
     }
     void init();
   }, [loaded, userId]);
+  /* eslint-enable react-hooks/exhaustive-deps */
 
   async function handleCreate(e: FormEvent) {
     e.preventDefault();

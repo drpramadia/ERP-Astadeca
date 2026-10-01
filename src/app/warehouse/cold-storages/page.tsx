@@ -324,7 +324,7 @@ export default function ColdStoragesPage() {
                     d="M3 8.5 12 3l9 5.5v10.5a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8.5Z" />
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 13h6M9 17h6M3 9.5h18" />
                 </svg>
-                Belum ada cold storage. Klik "+ Tambah Cold Storage" untuk membuat.
+                Belum ada cold storage. Klik &quot;+ Tambah Cold Storage&quot; untuk membuat.
               </div>
             ) : (
               <div className="divide-y divide-line">
@@ -471,7 +471,7 @@ export default function ColdStoragesPage() {
                       return (
                         <div
                           key={`bin-${ri}-${ci}`}
-                          onClick={() => bin && handleBinClick(bin)}
+                          onClick={() => { if (bin) handleBinClick(bin); }}
                           className={`
                             relative flex flex-col items-center justify-center rounded-lg border-2 font-mono text-xs font-bold
                             transition-all duration-100 select-none
@@ -587,7 +587,7 @@ export default function ColdStoragesPage() {
                           d="M20 7l-8-4-8 4m16 0-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
                       </svg>
                     </div>
-                    <p className="text-sm text-slate-600">Bin kosong. Klik tombol "Tanam Barang" untuk menempatkan barang.</p>
+                    <p className="text-sm text-slate-600">Bin kosong. Klik tombol &quot;Tanam Barang&quot; untuk menempatkan barang.</p>
                   </div>
                 )}
               </div>

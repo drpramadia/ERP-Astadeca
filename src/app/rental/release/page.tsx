@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { AppShell } from "@/components/app-shell";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
@@ -88,7 +89,8 @@ const REASON_OPTIONS = [
 /* -------------------------------------------------------------------- */
 
 export default function RentalReleasePage() {
-  const { userId, organizationId, loaded: sessionLoaded } = useSession();
+  const { userId, organizationId, permissions, loaded: sessionLoaded } = useSession();
+  const router = useRouter();
 
   const [contracts, setContracts] = useState<ContractOption[]>([]);
   const [selectedContractId, setSelectedContractId] = useState<string>("");
@@ -100,8 +102,10 @@ export default function RentalReleasePage() {
   const [success, setSuccess] = useState<string | null>(null);
 
   /* Load active contracts on mount */
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!sessionLoaded || !organizationId) return;
+    if (!permissions.has("rental.release")) { router.replace("/rental"); return; }
 
     async function loadContracts() {
       const supabase = createClient();
@@ -115,7 +119,7 @@ export default function RentalReleasePage() {
       setContracts(data ?? []);
     }
 
-    void loadContracts();
+    loadContracts();
   }, [sessionLoaded, organizationId]);
 
   /* Load allocations when a contract is selected */
