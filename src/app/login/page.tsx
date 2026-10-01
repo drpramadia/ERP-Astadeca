@@ -7,7 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -18,10 +18,35 @@ export default function LoginPage() {
     setError("");
 
     const supabase = createClient();
-    const { error: authError } = await supabase.auth.signInWithPassword({ email, password });
+
+    if (!username.trim()) {
+      setError("Username wajib diisi.");
+      setLoading(false);
+      return;
+    }
+
+    // Step 1: Lookup email from username via service RPC
+    const { data: lookup, error: lookupErr } = await supabase.rpc("login_with_username", {
+      p_username: username.trim(),
+      p_password: password,
+    });
+
+    if (lookupErr || !lookup?.success) {
+      setError(lookup?.error ?? "Login gagal. Periksa username dan password.");
+      setLoading(false);
+      return;
+    }
+
+    // Step 2: Sign in with the resolved email
+    const { error: authError } = await supabase.auth.signInWithPassword({
+      email: lookup.email,
+      password,
+    });
 
     if (authError) {
-      setError(authError.message === "Invalid login credentials" ? "Email atau kata sandi tidak valid." : authError.message);
+      setError(authError.message === "Invalid login credentials"
+        ? "Username atau kata sandi tidak valid."
+        : authError.message);
       setLoading(false);
       return;
     }
@@ -128,12 +153,13 @@ export default function LoginPage() {
           <div className="px-8 py-7">
             <form onSubmit={handleLogin} className="space-y-5">
               <div>
-                <label className="mb-2 block text-sm font-medium text-slate-300">Email</label>
+                <label className="mb-2 block text-sm font-medium text-slate-300">Username</label>
                 <input
-                  type="email" value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required autoComplete="email"
-                  placeholder="email@perusahaan.com"
+                  type="text"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  required autoComplete="username"
+                  placeholder="namauser"
                   className="w-full rounded-xl border border-white/[0.1] bg-white/[0.06] px-4 py-3 text-sm text-white placeholder-slate-500 backdrop-blur-sm outline-none transition focus:border-primary/60 focus:bg-white/[0.09] focus:ring-2 focus:ring-primary/20"
                 />
               </div>

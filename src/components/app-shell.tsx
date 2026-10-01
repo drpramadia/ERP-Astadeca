@@ -431,8 +431,10 @@ export function AppShell({ children }: { children: ReactNode }) {
       ? ["operational"]
       : ["all"];
 
+  // "all" groups are always visible — they don't filter by system.
+  // A role with "operational" still sees the "all" groups (Dashboard, Keuangan, etc.)
   const visibleGroups = NAV_GROUPS
-    .filter((g) => g.systems.some((s) => navSystems.includes(s)))
+    .filter((g) => g.systems.includes("all") || g.systems.some((s) => navSystems.includes(s)))
     .map((g) => ({ ...g, items: g.items.filter((i) => canSee(i.permission)) }))
     .filter((g) => g.items.length > 0);
 

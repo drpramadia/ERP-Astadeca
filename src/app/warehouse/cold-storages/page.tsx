@@ -139,7 +139,7 @@ export default function ColdStoragesPage() {
     setIsLoading(false);
   }, [organizationId]);
 
-  useEffect(() => { void loadStorages(); }, [loadStorages]);
+  useEffect(() => { loadStorages(); }, [loadStorages]);
 
   // Load bins when a storage is selected
   const loadBins = useCallback(async (storage: ColdStorage) => {

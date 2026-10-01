@@ -76,45 +76,6 @@ async function getDashboardData(organizationId: string) {
   };
 }
 
-function ColdStorageCard({
-  coldStorage,
-}: {
-  coldStorage: { id: string; code: string; name: string; capacity_kg: number; occupied_kg: number; available_kg: number; utilization_percentage: number; temperature_min_c?: number; temperature_max_c?: number };
-}) {
-  return (
-    <div className="rounded-2xl border border-line bg-white p-5 shadow-sm">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">{coldStorage.code}</p>
-          <h3 className="mt-2 text-xl font-semibold text-ink">{formatKg(Number(coldStorage.capacity_kg))}</h3>
-        </div>
-        <StatusBadge tone={coldStorage.utilization_percentage >= 90 ? "danger" : coldStorage.utilization_percentage >= 75 ? "warning" : "success"}>
-          {coldStorage.utilization_percentage.toFixed(1)}%
-        </StatusBadge>
-      </div>
-      <div className="mt-4">
-        <div className="flex justify-between text-xs text-slate-500 mb-1.5">
-          <span>Terpakai</span>
-          <span>{formatKg(coldStorage.occupied_kg)}</span>
-        </div>
-        <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
-          <div className="h-full rounded-full bg-success" style={{ width: `${Math.min(coldStorage.utilization_percentage, 100)}%` }} />
-        </div>
-        <div className="flex justify-between text-xs text-slate-500 mt-1.5">
-          <span>Tersedia</span>
-          <span>{formatKg(coldStorage.available_kg)}</span>
-        </div>
-      </div>
-      {(coldStorage.temperature_min_c || coldStorage.temperature_max_c) && (
-        <div className="mt-4 rounded-lg bg-slate-50 px-3 py-2">
-          <p className="text-[10px] text-slate-500">Suhu</p>
-          <p className="text-sm font-medium text-ink">{coldStorage.temperature_min_c || 0}C - {coldStorage.temperature_max_c || 0}C</p>
-        </div>
-      )}
-    </div>
-  );
-}
-
 type RecentMovement = {
   id: string;
   movement_type: string;

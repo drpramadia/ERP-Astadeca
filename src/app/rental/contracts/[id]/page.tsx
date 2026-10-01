@@ -21,6 +21,7 @@ interface ContractDetail {
   notes?: string;
   approved_at?: string;
   created_at: string;
+  approval_request_id?: string;
   customers?: { name: string; code: string; phone?: string; email?: string };
   cold_storages?: { name: string; code: string };
   profiles?: { full_name: string | null };
@@ -52,7 +53,6 @@ export default function ContractDetailPage() {
     async function init() {
       const supabase = createClient();
       const { data: sessionData } = await supabase.auth.getSession();
-const user = sessionData?.session?.user;
       const userId = sessionData?.session?.user?.id;
       if (!userId) return;
 
@@ -86,15 +86,14 @@ const user = sessionData?.session?.user;
   }, [contractId]);
 
   async function decide(decision: "approve" | "reject") {
-    if (!(contract as any)?.approval_request_id) return;
+    if (!contract?.approval_request_id) return;
     if (!confirm(`Yakin ingin ${decision === "approve" ? "menyetujui" : "menolak"} kontrak ini?`)) return;
     setIsDeciding(true);
     const supabase = createClient();
     const { data: sessionData } = await supabase.auth.getSession();
-const user = sessionData?.session?.user;
     const userId = sessionData?.session?.user?.id;
     const { error: err } = await supabase.rpc("decide_approval_request", {
-      p_approval_request_id: (contract as any).approval_request_id,
+      p_approval_request_id: contract.approval_request_id,
       p_action: decision === "approve" ? "APPROVE" : "REJECT",
       p_comment: decision === "approve" ? "Disetujui." : "Ditolak.",
       p_actor_user_id: userId,
@@ -113,7 +112,6 @@ const user = sessionData?.session?.user;
     setIsDeciding(true);
     const supabase = createClient();
     const { data: sessionData } = await supabase.auth.getSession();
-const user = sessionData?.session?.user;
     const userId = sessionData?.session?.user?.id;
     const { error: err } = await supabase.rpc("activate_rental_contract", {
       p_contract_id: contractId,

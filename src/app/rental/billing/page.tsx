@@ -27,7 +27,7 @@ interface ContractOption {
   id: string;
   contract_number: string;
   title: string;
-  rental_contracts_customer_fk?: { name: string } | { name: string }[];
+  rental_contracts_customer_fkey?: { name: string } | { name: string }[];
 }
 
 interface BillingForm {
@@ -60,7 +60,7 @@ export default function BillingPage() {
   const [error, setError] = useState<string | null>(null);
 
   // Auto-calculate
-  const [calcResult, setCalcResult] = useState<{
+  const [_calcResult, setCalcResult] = useState<{
     total_quantity_kg: number; total_days: number;
     rate_per_kg_day: number; total_charge: number;
   } | null>(null);
@@ -89,7 +89,7 @@ export default function BillingPage() {
           .limit(50),
         supabase
           .from("rental_contracts")
-          .select("id, contract_number, title, rental_contracts_customer_fk(name)")
+          .select("id, contract_number, title, rental_contracts_customer_fkey(name)")
           .eq("organization_id", membership.organization_id)
           .eq("status", "ACTIVE")
           .order("contract_number"),
@@ -99,25 +99,6 @@ export default function BillingPage() {
     }
     void init().finally(() => setIsLoading(false));
   }, [loaded, userId]);
-
-  async function handleCalculate() {
-    if (!form.contractId || !form.periodStart || !form.periodEnd) {
-      setError("Pilih kontrak dan periode billing terlebih dahulu.");
-      return;
-    }
-    const supabase = createClient();
-    const { data, error: calcErr } = await supabase.rpc("calculate_rental_billing", {
-      p_contract_id: form.contractId,
-      p_period_start: form.periodStart,
-      p_period_end: form.periodEnd,
-    });
-    if (calcErr) { setError("Gagal menghitung: " + calcErr.message); return; }
-    const rows = data as unknown as { total_quantity_kg: number; total_days: number; rate_per_kg_day: number; total_charge: number }[];
-    if (rows && rows.length > 0) {
-      setCalcResult(rows[0]);
-      setForm(f => ({ ...f, totalAmount: rows[0].total_charge.toString() }));
-    }
-  }
 
   async function handleCreate() {
     if (!form.contractId || !form.periodStart || !form.periodEnd || !form.totalAmount) {
@@ -262,7 +243,7 @@ export default function BillingPage() {
               <option value="">Pilih kontrak...</option>
               {contracts.map((c) => (
                 <option key={c.id} value={c.id}>
-                  {c.contract_number} · {c.title} ({Array.isArray(c.rental_contracts_customer_fk) ? c.rental_contracts_customer_fk[0]?.name : c.rental_contracts_customer_fk?.name || "—"})
+                  {c.contract_number} · {c.title} ({Array.isArray(c.rental_contracts_customer_fkey) ? c.rental_contracts_customer_fkey[0]?.name : c.rental_contracts_customer_fkey?.name || "—"})
                 </option>
               ))}
             </select>
