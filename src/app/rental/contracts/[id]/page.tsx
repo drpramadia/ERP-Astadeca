@@ -62,7 +62,7 @@ export default function ContractDetailPage() {
         .eq("user_id", userId).eq("is_active", "true").maybeSingle();
       if (!memb) return;
 
-      const [{ data: cData, error: cErr }, { data: aData, error: aErr }] = await Promise.all([
+      const [{ data: cData, error: cErr }, { data: aData }] = await Promise.all([
         supabase
           .from("rental_contracts")
           .select(`*, customers(name, code), cold_storages(name, code), profiles!rental_contracts_created_by_fkey(full_name)`)
@@ -102,7 +102,6 @@ export default function ContractDetailPage() {
     if (err) {
       setError(err.message);
     } else {
-      router.refresh();
       window.location.reload();
     }
   }
@@ -121,7 +120,6 @@ export default function ContractDetailPage() {
     if (err) {
       setError(err.message);
     } else {
-      router.refresh();
       window.location.reload();
     }
   }

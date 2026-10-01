@@ -29,7 +29,6 @@ interface ContractOption {
   title: string;
   rental_contracts_customer_fkey?: { name: string } | { name: string }[];
 }
-
 interface BillingForm {
   contractId: string;
   periodStart: string;
@@ -58,12 +57,6 @@ export default function BillingPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-
-  // Auto-calculate
-  const [_calcResult, setCalcResult] = useState<{
-    total_quantity_kg: number; total_days: number;
-    rate_per_kg_day: number; total_charge: number;
-  } | null>(null);
 
   useEffect(() => {
     if (!loaded || !userId) return;
@@ -148,9 +141,9 @@ export default function BillingPage() {
       setMessage("Invoice billing berhasil dibuat.");
       setShowCreate(false);
       setForm(blankForm);
-      window.location.reload();
-    } catch (e: any) {
-      setError(e?.message || "Gagal membuat invoice.");
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : "Gagal membuat invoice.";
+      setError(message);
     } finally {
       setIsSaving(false);
     }

@@ -425,14 +425,18 @@ export function AppShell({ children }: { children: ReactNode }) {
     return permissions.has(perm as Parameters<typeof permissions.has>[0]);
   };
 
+  // navSystems: which system sections this user is entitled to see.
+  // "all" is included so groups with ["all"] match everyone.
+  // "dual" gets both rental + operational so groups with [rental] or [operational] match.
   const navSystems: NavSystem[] = systemType === "rental"
-    ? ["rental"]
+    ? ["rental", "all"]
     : systemType === "operational"
-      ? ["operational"]
-      : ["all"];
+      ? ["operational", "all"]
+      : systemType === "dual"
+        ? ["rental", "operational", "all"]
+        : ["all"];
 
-  // "all" groups are always visible — they don't filter by system.
-  // A role with "operational" still sees the "all" groups (Dashboard, Keuangan, etc.)
+  // Groups with "all" are always visible. Otherwise match if any group system is in navSystems.
   const visibleGroups = NAV_GROUPS
     .filter((g) => g.systems.includes("all") || g.systems.some((s) => navSystems.includes(s)))
     .map((g) => ({ ...g, items: g.items.filter((i) => canSee(i.permission)) }))

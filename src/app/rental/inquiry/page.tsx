@@ -5,7 +5,6 @@ import { AppShell } from "@/components/app-shell";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Modal } from "@/components/ui/modal";
 import { createClient } from "@/lib/supabase/client";
@@ -94,7 +93,7 @@ export default function InquiryPage() {
     setIsLoading(false);
   }, []);
 
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => { load(); }, [load]);
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
@@ -107,7 +106,7 @@ export default function InquiryPage() {
     const { data: numData } = await supabase.rpc("generate_inquiry_number", { p_org_id: orgId });
     const inquiryNumber: string = (numData as string) ?? `INQ-${Date.now()}`;
 
-    const { data, error } = await supabase.from("rental_inquiries").insert({
+    const { error } = await supabase.from("rental_inquiries").insert({
       organization_id: orgId,
       inquiry_number: inquiryNumber,
       customer_name: form.customerName,

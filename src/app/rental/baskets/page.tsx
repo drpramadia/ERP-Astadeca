@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { PageHeader } from "@/components/page-header";
-import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { createClient } from "@/lib/supabase/client";
 
@@ -43,12 +42,6 @@ const BIN_COLORS: Record<BasketStatus, string> = {
   EMPTY:    "bg-slate-100 border-slate-300 text-slate-400 hover:border-slate-400",
   OCCUPIED: "bg-emerald-100 border-emerald-400 text-emerald-800 hover:bg-emerald-200 cursor-pointer",
   RESERVED: "bg-amber-100 border-amber-400 text-amber-800 hover:bg-amber-200 cursor-pointer",
-};
-
-const BIN_BORDER: Record<BasketStatus, string> = {
-  EMPTY:    "border-2",
-  OCCUPIED: "border-2",
-  RESERVED: "border-2",
 };
 
 function BasketCell({ basket, onClick }: { basket: Basket; onClick?: () => void }) {
